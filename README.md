@@ -1,50 +1,112 @@
-# Welcome to your Expo app 👋
+# Smart Car SPA Mobile 🚗
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ứng dụng di động cho hệ thống Smart Car SPA được phát triển với [Expo](https://expo.dev) và React Native.
 
-## Get started
+## Bắt đầu
 
-1. Install dependencies
+### Cài đặt
+
+1. Cài đặt dependencies
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Khởi chạy ứng dụng
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+### Chạy ứng dụng
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+Bạn có thể mở ứng dụng trên:
+
+- [Development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Expo Go](https://expo.dev/go) - ứng dụng sandbox để test
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Bạn có thể bắt đầu phát triển bằng cách chỉnh sửa các file trong thư mục **app**. Dự án này sử dụng [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+## Quy tắc Commit
 
-When you're ready, run:
+Dự án này sử dụng [Conventional Commits](https://www.conventionalcommits.org/) để đảm bảo lịch sử commit rõ ràng và dễ theo dõi.
 
-```bash
-npm run reset-project
+### Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Types
 
-## Learn more
+- **feat**: Tính năng mới
+- **fix**: Sửa lỗi
+- **docs**: Cập nhật tài liệu
+- **style**: Thay đổi format code (không ảnh hưởng logic)
+- **refactor**: Refactor code
+- **perf**: Cải thiện hiệu suất
+- **test**: Thêm hoặc sửa test
+- **chore**: Cập nhật build tools, dependencies, etc.
+- **ci**: Cập nhật CI/CD
+- **build**: Thay đổi build system
+- **revert**: Revert commit trước đó
 
-To learn more about developing your project with Expo, look at the following resources:
+### Scopes (tùy chọn)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **auth**: Xác thực người dùng
+- **ui**: Giao diện người dùng
+- **api**: API calls
+- **navigation**: Điều hướng
+- **storage**: Lưu trữ dữ liệu
+- **config**: Cấu hình
 
-## Join the community
+### Ví dụ
 
-Join our community of developers creating universal apps.
+```bash
+# Tính năng mới
+git commit -m "feat(auth): thêm đăng nhập bằng Google"
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Sửa lỗi
+git commit -m "fix(ui): sửa lỗi hiển thị button trên iOS"
+
+# Cập nhật tài liệu
+git commit -m "docs: cập nhật README với hướng dẫn cài đặt"
+
+# Refactor
+git commit -m "refactor(api): tách logic API calls thành service riêng"
+
+# Breaking change
+git commit -m "feat(auth)!: thay đổi cấu trúc response API đăng nhập
+
+BREAKING CHANGE: API đăng nhập trả về object thay vì string"
+```
+
+### Lưu ý
+
+- Sử dụng tiếng Việt cho description
+- Mô tả ngắn gọn, rõ ràng
+- Sử dụng dấu chấm (.) ở cuối description
+- Breaking changes phải có `!` sau type và mô tả trong footer
+
+## Cấu trúc dự án
+
+```
+├── app/                 # App router (Expo Router)
+├── components/          # Reusable components
+├── constants/           # Constants và theme
+├── hooks/              # Custom hooks
+├── assets/             # Images, fonts, etc.
+└── scripts/            # Build scripts
+```
+
+## Tài liệu tham khảo
+
+- [Expo documentation](https://docs.expo.dev/)
+- [React Native documentation](https://reactnative.dev/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
