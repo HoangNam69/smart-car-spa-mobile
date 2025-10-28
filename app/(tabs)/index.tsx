@@ -13,8 +13,8 @@ export default function Index() {
         }}
       >
         <Image
-          source={require("../assets/images/logo/logo-sider.png")}
-          style={{ width: 200, marginTop: 20 }}
+          source={require("../../assets/images/logo/logo-sider.png")}
+          style={{ width: 200, marginTop: 20, marginBottom: 20 }}
           resizeMode="contain"
         />
         <CarouselCustom />

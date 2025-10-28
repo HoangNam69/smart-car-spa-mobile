@@ -21,7 +21,7 @@ export default function CarouselCustom() {
         height={200}
         autoPlay={true}
         data={data}
-        scrollAnimationDuration={1200}
+        scrollAnimationDuration={2000}
         renderItem={({ item }) => (
           <View
             style={{

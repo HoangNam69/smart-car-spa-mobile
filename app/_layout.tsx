@@ -8,7 +8,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="auto" />
       <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="auths/login"
+          options={{
+            title: "Smart Car Spa",
+            headerTitleAlign: "center",
+            headerTintColor: "#33363F",
+            headerTitleStyle: {
+              fontWeight: "bold",
+              fontSize: 20,
+            },
+          }}
+        />
       </Stack>
     </SafeAreaProvider>
   );
