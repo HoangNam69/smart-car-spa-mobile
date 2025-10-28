@@ -12,6 +12,7 @@ export default function TabsLayout() {
             <Ionicons name="home-outline" color={color} size={size} />
           ),
           headerShown: false,
+          
         }}
       />
       <Tabs.Screen
