@@ -2,7 +2,6 @@ import * as Font from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { useColorScheme } from "react-native";
 import {
   ActivityIndicator,
   DefaultTheme,
@@ -10,6 +9,7 @@ import {
 } from "react-native-paper";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider } from "../src/context/AuthContext";
 
 const paperTheme = {
   ...DefaultTheme,
@@ -21,7 +21,6 @@ const paperTheme = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
@@ -49,36 +48,38 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={paperTheme}>
-        <StatusBar style="auto" />
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="auths/login"
-            options={{
-              title: "Smart Car Spa",
-              headerTitleAlign: "center",
-              headerTintColor: "#33363F",
-              headerTitleStyle: {
-                fontWeight: "bold",
-                fontSize: 20,
-              },
-            }}
-          />
-          <Stack.Screen
-            name="auths/signup"
-            options={{
-              title: "",
-              headerTitleAlign: "center",
-              headerTintColor: "#33363F",
-              headerTitleStyle: {
-                fontWeight: "bold",
-                fontSize: 20,
-              },
-            }}
-          />
-        </Stack>
-      </PaperProvider>
+      <AuthProvider>
+        <PaperProvider theme={paperTheme}>
+          <StatusBar style="auto" />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="auths/login"
+              options={{
+                title: "Smart Car Spa",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
+              name="auths/signup"
+              options={{
+                title: "",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+          </Stack>
+        </PaperProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

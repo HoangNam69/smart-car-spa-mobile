@@ -1,0 +1,173 @@
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { authService } from '../services/auth.service';
+import { tokenStorage } from '../storage/tokenStorage';
+import { AuthState, LoginRequest, UserInfo } from '../types/auth.type';
+
+interface AuthContextType extends AuthState {
+  login: (credentials: LoginRequest) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (userData: UserInfo) => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const initialState: AuthState = {
+  isAuthenticated: false,
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  loading: false,
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [state, setState] = useState<AuthState>(initialState);
+
+  const login = async (credentials: LoginRequest) => {
+    try {
+      setState(prev => ({ ...prev, loading: true }));
+      
+      const response = await authService.login(credentials);
+      
+      // Map từ snake_case (từ authService) sang camelCase
+      const accessToken = response.data.access_token || '';
+      const refreshToken = response.data.refresh_token || '';
+      const user = response.data.user_info || null;
+      
+      // Lưu tokens và user data vào storage
+      await tokenStorage.setTokens(accessToken, refreshToken);
+      if (user) {
+        await tokenStorage.setUserData(user);
+      }
+      
+      setState({
+        isAuthenticated: true,
+        user,
+        accessToken,
+        refreshToken,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      setState({
+        isAuthenticated: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        loading: false,
+      });
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const refreshToken = await tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      await tokenStorage.clearTokens();
+      setState({
+        isAuthenticated: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        loading: false,
+      });
+    }
+  };
+
+  // Cập nhật thông tin user (khi user chỉnh sửa profile, đổi avatar, ...)
+  const updateUser = async (userData: UserInfo) => {
+    try {
+      // Lưu vào storage
+      await tokenStorage.setUserData(userData);
+      
+      // Cập nhật state
+      setState(prev => ({
+        ...prev,
+        user: userData,
+      }));
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
+    }
+  };
+
+  // Làm mới thông tin user từ server (khi cần lấy dữ liệu mới nhất)
+  const refreshUser = async () => {
+    try {
+      // Nếu có API endpoint để lấy user info mới nhất, gọi ở đây
+      // Ví dụ: const response = await axiosInstance.get('/auth/profile');
+      // Sau đó gọi updateUser(response.data);
+      
+      // Hoặc đơn giản là reload từ storage (nếu đã được cập nhật ở nơi khác)
+      const userData = await tokenStorage.getUserData();
+      if (userData) {
+        setState(prev => ({
+          ...prev,
+          user: userData,
+        }));
+      }
+    } catch (error) {
+      console.error('Refresh user error:', error);
+    }
+  };
+
+  // Kiểm tra authentication khi app khởi động
+  // Chỉ cần load từ storage, không cần verify token
+  // Vì axios interceptor sẽ tự động xử lý refresh token khi có lỗi 401
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const hasTokens = await tokenStorage.hasValidTokens();
+        if (hasTokens) {
+          const userData = await tokenStorage.getUserData();
+          const accessToken = await tokenStorage.getAccessToken();
+          const refreshToken = await tokenStorage.getRefreshToken();
+          
+          if (userData && accessToken && refreshToken) {
+            // Nếu token không hợp lệ, axios interceptor sẽ tự động refresh khi gọi API
+            setState({
+              isAuthenticated: true,
+              user: userData,
+              accessToken,
+              refreshToken,
+              loading: false,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Check auth error:', error);
+        setState(initialState);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const value: AuthContextType = {
+    ...state,
+    login,
+    logout,
+    updateUser,
+    refreshUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

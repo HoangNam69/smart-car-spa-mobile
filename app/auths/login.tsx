@@ -9,36 +9,59 @@ import {
 } from "react-native";
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../src/context/AuthContext";
+import { LoginRequest } from "../../src/types/auth.type";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
+  const { login, loading } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [snack, setSnack] = useState({ visible: false, msg: "" });
 
   const handleLogin = async () => {
-    if (!phone || !password) {
+    if (!email || !password) {
       setSnack({ visible: true, msg: "Vui lòng nhập đầy đủ thông tin" });
       return;
     }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setSnack({ visible: true, msg: "Vui lòng nhập email hợp lệ" });
+      return;
+    }
+
     try {
-      setLoading(true);
-      // Giả lập gọi API gửi Login
-      await new Promise((r) => setTimeout(r, 800));
+      const credentials: LoginRequest = {
+        email: email.trim(),
+        password: password,
+      };
+
+      await login(credentials);
+
       setSnack({ visible: true, msg: "Đăng nhập thành công" });
-    } catch (e) {
-      setSnack({ visible: true, msg: "Đăng nhập thất bại" });
-    } finally {
-      setLoading(false);
+
+      // Navigate to main app after successful login
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 1000);
+    } catch (error) {
+      console.error("Login error:", error);
+      setSnack({
+        visible: true,
+        msg: error instanceof Error ? error.message : "Đăng nhập thất bại",
+      });
     }
   };
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <View style={{ justifyContent: "flex-start", alignItems: "center" }}>
         <Image
           source={require("../../assets/images/logo/ShortLogo.png")}
-          style={{ width: 160, height: 120, marginTop: 20, marginBottom: 20 }}
+          style={{ width: 160, height: 120, marginTop: 100, marginBottom: 40 }}
           resizeMode="contain"
         />
       </View>
@@ -63,22 +86,26 @@ export default function LoginScreen() {
           </Text>
 
           <TextInput
-            label="Số điện thoại"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
             mode="outlined"
             style={{ marginBottom: 12 }}
-            left={<TextInput.Affix text="+84 " />}
           />
           <TextInput
             label="Mật khẩu"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             mode="outlined"
             style={{ marginBottom: 12 }}
-            right={<TextInput.Icon icon="eye" />}
+            right={
+              <TextInput.Icon
+                icon={showPassword ? "eye-off" : "eye"}
+                onPress={() => setShowPassword(!showPassword)}
+              />
+            }
           />
 
           <Button
@@ -114,7 +141,29 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center" },
-  content: { padding: 20 },
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  container: {
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  content: {
+    padding: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    marginHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
 });
