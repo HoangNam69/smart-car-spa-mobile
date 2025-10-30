@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Alert, Image, View } from "react-native";
-import { Avatar, Button, Card, Divider, Text } from "react-native-paper";
+import { Avatar, Button, Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 
@@ -115,9 +115,6 @@ export default function ProfileScreen() {
   const fullName = user.full_name || "";
   const email = user.email || "";
   const phoneNumber = user.phone_number || "";
-  const userType = user.user_type;
-  const customerRank = user.customer_rank;
-  const roleName = user.role?.role_name || "";
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -150,60 +147,98 @@ export default function ProfileScreen() {
                 )}
               </View>
             </View>
-
-            <Divider style={{ marginVertical: 8 }} />
-
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <Text variant="bodyMedium" style={{ fontWeight: "bold" }}>
-                Loại tài khoản:
-              </Text>
-              <Text variant="bodyMedium">
-                {userType === "CUSTOMER" ? "Khách hàng" : "Nhân viên"}
-              </Text>
+          </Card.Content>
+        </Card>
+        <Card style={{ marginBottom: 16 }}>
+          <Card.Title
+            title="Tài khoản"
+            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
+          />
+          <Card.Content>
+            <View>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                textColor="#151515"
+                icon="account"
+                onPress={() => router.push("/personal/personal")}
+              >
+                Thông tin tài khoản
+              </Button>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                icon="lock"
+                textColor="#151515"
+                onPress={() => router.push("/auths/password-management")}
+              >
+                Đổi mật khẩu
+              </Button>
             </View>
-
-            {customerRank && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
+          </Card.Content>
+        </Card>
+        <Card style={{ marginBottom: 16 }}>
+          <Card.Title
+            title="Quản lý xe"
+            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
+          />
+          <Card.Content>
+            <View>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                textColor="#151515"
+                icon="plus"
+                onPress={() =>
+                  router.push("/vehicle-management/vehicle-addition")
+                }
               >
-                <Text variant="bodyMedium" style={{ fontWeight: "bold" }}>
-                  Hạng khách hàng:
-                </Text>
-                <Text variant="bodyMedium">
-                  {customerRank === "BRONZE"
-                    ? "Đồng"
-                    : customerRank === "SILVER"
-                    ? "Bạc"
-                    : customerRank === "GOLD"
-                    ? "Vàng"
-                    : "Bạch kim"}
-                </Text>
-              </View>
-            )}
-
-            {roleName && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
+                Thêm xe mới
+              </Button>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                icon="car-outline"
+                textColor="#151515"
+                onPress={() => router.push("/vehicle-management/vehicle-list")}
               >
-                <Text variant="bodyMedium" style={{ fontWeight: "bold" }}>
-                  Vai trò:
-                </Text>
-                <Text variant="bodyMedium">{roleName}</Text>
-              </View>
-            )}
+                Danh sách xe
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+        <Card style={{ marginBottom: 16 }}>
+          <Card.Title
+            title="Lịch sử"
+            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
+          />
+          <Card.Content>
+            <View>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                textColor="#151515"
+                icon="calendar-outline"
+                onPress={() =>
+                  router.push(
+                    "/history-management/booking-history/booking-history"
+                  )
+                }
+              >
+                Lịch sử đặt lịch
+              </Button>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                icon="wrench-outline"
+                textColor="#151515"
+                onPress={() =>
+                  router.push("/history-management/care-history/care-history")
+                }
+              >
+                Lịch sử chăm sóc xe
+              </Button>
+            </View>
           </Card.Content>
         </Card>
 
