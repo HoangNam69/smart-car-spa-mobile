@@ -114,4 +114,11 @@ export const vehicleProfileService = {
       throw new Error(api?.message || "Cập nhật thông tin xe thất bại");
     return api.data as VehicleProfileDto;
   },
+
+  async create(data: Partial<VehicleProfileDto>): Promise<VehicleProfileDto> {
+    const res = await axiosInstance.post(`/vehicles/profiles/create`, data);
+    const api = res.data;
+    if (!api?.success || !api?.data) throw new Error(api?.message || "Tạo xe thất bại");
+    return api.data as VehicleProfileDto;
+  },
 };
