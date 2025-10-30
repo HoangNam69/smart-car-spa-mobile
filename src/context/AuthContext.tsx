@@ -2,11 +2,13 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 import { authService } from '../services/auth.service';
 import { tokenStorage } from '../storage/tokenStorage';
 import { AuthState, LoginRequest, UserInfo } from '../types/auth.types';
+import { UpdateUserRequest } from '../types/user.types';
+import { userService } from '../services/user.service';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (userData: UserInfo) => Promise<void>;
+  updateUser: (userData: UpdateUserRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -84,17 +86,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Thay đổi hàm updateUser cho chuẩn theo backend và services
   // Cập nhật thông tin user (khi user chỉnh sửa profile, đổi avatar, ...)
-  const updateUser = async (userData: UserInfo) => {
+  const updateUser = async (update: UpdateUserRequest) => {
     try {
-      // Lưu vào storage
-      await tokenStorage.setUserData(userData);
-      
-      // Cập nhật state
-      setState(prev => ({
-        ...prev,
-        user: userData,
-      }));
+      const userId = state.user?.user_id;
+      if (!userId) throw new Error('No user id');
+      const response = await userService.updateUser(userId, update);
+      const updatedUser = response.data;
+      // Lưu vào storage và cập nhật state
+      await tokenStorage.setUserData(updatedUser);
+      setState(prev => ({ ...prev, user: updatedUser as UserInfo }));
     } catch (error) {
       console.error('Update user error:', error);
       throw error;

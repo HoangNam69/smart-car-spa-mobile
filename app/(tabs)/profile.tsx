@@ -1,8 +1,8 @@
+import { useAuth } from "@/src/context/AuthContext";
 import { router } from "expo-router";
 import { Alert, Image, View } from "react-native";
 import { Avatar, Button, Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../src/context/AuthContext";
 
 export default function ProfileScreen() {
   const { user, logout, isAuthenticated, loading } = useAuth();
