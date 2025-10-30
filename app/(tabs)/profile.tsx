@@ -227,17 +227,6 @@ export default function ProfileScreen() {
               >
                 Lịch sử đặt lịch
               </Button>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                icon="wrench-outline"
-                textColor="#151515"
-                onPress={() =>
-                  router.push("/history-management/care-history/care-history")
-                }
-              >
-                Lịch sử chăm sóc xe
-              </Button>
             </View>
           </Card.Content>
         </Card>

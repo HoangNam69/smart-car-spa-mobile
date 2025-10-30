@@ -36,6 +36,15 @@ export const bookingService = {
     }
     return [];
   },
+
+  async createBooking(data: any) {
+    const res = await axiosInstance.post(
+      "/integrated-booking/create-with-slot",
+      data
+    );
+    const api = res.data;
+    if (!api?.success || !api?.data)
+      throw new Error(api?.message || "Tạo lịch thất bại");
+    return api.data as BookingInfoDto;
+  },
 };
-
-

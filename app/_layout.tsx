@@ -149,18 +149,6 @@ export default function RootLayout() {
                 },
               }}
             />
-            <Stack.Screen
-              name="history-management/care-history/care-history"
-              options={{
-                title: "Lịch sử chăm sóc xe",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
           </Stack>
         </PaperProvider>
       </AuthProvider>
