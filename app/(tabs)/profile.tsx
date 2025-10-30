@@ -209,6 +209,27 @@ export default function ProfileScreen() {
         </Card>
         <Card style={{ marginBottom: 16 }}>
           <Card.Title
+            title="Quá trình chăm sóc"
+            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
+          />
+          <Card.Content>
+            <View>
+              <Button
+                mode="text"
+                style={{ alignItems: "flex-start" }}
+                icon="wrench-outline"
+                textColor="#151515"
+                onPress={() =>
+                  router.push("/history-management/care-history/care-history")
+                }
+              >
+                Theo dõi quá trình chăm sóc
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+        <Card style={{ marginBottom: 16 }}>
+          <Card.Title
             title="Lịch sử"
             titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
           />

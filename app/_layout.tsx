@@ -149,6 +149,30 @@ export default function RootLayout() {
                 },
               }}
             />
+            <Stack.Screen
+              name="history-management/care-history/care-history"
+              options={{
+                title: "Theo dõi hệ thống chăm sóc xe",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
+              name="history-management/care-history/care-process/[id]"
+              options={{
+                title: "Quá trình chăm sóc",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
           </Stack>
         </PaperProvider>
       </AuthProvider>
