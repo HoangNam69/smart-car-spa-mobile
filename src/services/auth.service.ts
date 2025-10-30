@@ -1,5 +1,5 @@
 import axiosInstance from "../config/axiosConfig";
-import { LoginRequest, LoginResponse } from "../types/auth.types";
+import { ChangePasswordRequest, LoginRequest, LoginResponse } from "../types/auth.types";
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -110,6 +110,17 @@ class AuthService {
       });
     } catch (error) {
       console.error("Logout error:", error);
+    }
+  }
+
+  async changePassword(payload: ChangePasswordRequest): Promise<void> {
+    try {
+      await axiosInstance.post("/auth/change-password", payload);
+    } catch (error) {
+      console.error("Change password error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Có lỗi xảy ra khi đổi mật khẩu"
+      );
     }
   }
 
