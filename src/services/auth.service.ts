@@ -1,5 +1,5 @@
 import axiosInstance from "../config/axiosConfig";
-import { LoginRequest, LoginResponse } from "../types/auth.type";
+import { LoginRequest, LoginResponse } from "../types/auth.types";
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { authService } from "../services/auth.service";
-import { LoginRequest, LoginResponse } from "../types/auth.type";
+import { LoginRequest, LoginResponse } from "../types/auth.types";
 
 export function useAuthApi() {
   const login = useCallback(
