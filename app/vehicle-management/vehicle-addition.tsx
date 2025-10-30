@@ -1,10 +1,27 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { ActivityIndicator, Avatar, Button, Card, Divider, HelperText, List, Modal, Portal, Snackbar, Text, TextInput, useTheme } from "react-native-paper";
+import {
+  ActivityIndicator,
+  Avatar,
+  Button,
+  Card,
+  Divider,
+  HelperText,
+  List,
+  Modal,
+  Portal,
+  Snackbar,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
-import { vehicleService, type DropdownItem } from "../../src/services/vehicle.service";
+import {
+  vehicleService,
+  type DropdownItem,
+} from "../../src/services/vehicle.service";
 import { vehicleProfileService } from "../../src/services/vehicleProfile.service";
 
 export default function VehicleAdditionScreen() {
@@ -23,7 +40,11 @@ export default function VehicleAdditionScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; error?: boolean }>({ visible: false, message: "", error: false });
+  const [snackbar, setSnackbar] = useState<{
+    visible: boolean;
+    message: string;
+    error?: boolean;
+  }>({ visible: false, message: "", error: false });
   const [navigateAfterSnack, setNavigateAfterSnack] = useState(false);
   const [brandModal, setBrandModal] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
@@ -37,7 +58,9 @@ export default function VehicleAdditionScreen() {
         vehicleService.getTypesDropdown(),
         vehicleService.getModelsDropdown(),
       ]);
-      setBrands(b); setTypes(t); setModels(m);
+      setBrands(b);
+      setTypes(t);
+      setModels(m);
     } finally {
       setLoading(false);
     }
@@ -50,7 +73,8 @@ export default function VehicleAdditionScreen() {
   function validate() {
     const next: { [k: string]: string } = {};
     if (!licensePlate.trim()) next.license_plate = "Biển số là bắt buộc";
-    if (distance && !/^\d{1,10}$/.test(distance)) next.distance = "Số km phải là số nguyên";
+    if (distance && !/^\d{1,10}$/.test(distance))
+      next.distance = "Số km phải là số nguyên";
     if (!brandId) next.brand = "Hãng xe là bắt buộc";
     if (!typeId) next.type = "Loại xe là bắt buộc";
     if (!modelId) next.model = "Dòng xe là bắt buộc";
@@ -75,27 +99,47 @@ export default function VehicleAdditionScreen() {
         is_deleted: false,
       });
       setNavigateAfterSnack(true);
-      setSnackbar({ visible: true, message: "Thêm xe thành công!", error: false });
+      setSnackbar({
+        visible: true,
+        message: "Thêm xe thành công!",
+        error: false,
+      });
     } catch (e: any) {
-      setSnackbar({ visible: true, message: e?.message || "Thêm xe thất bại", error: true });
+      setSnackbar({
+        visible: true,
+        message: e?.message || "Thêm xe thất bại",
+        error: true,
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
+      edges={["top", "bottom"]}
+    >
       {loading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
           <ActivityIndicator />
-          <Text style={{ marginTop: 8 }}>Đang tải danh mục...</Text>
+          <Text style={{ marginTop: 8 }}>Đang tải dữ liệu...</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
           <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
             <Card.Content style={{ alignItems: "center", paddingVertical: 20 }}>
-              <Avatar.Icon size={64} icon="car" style={{ backgroundColor: "#E8ECFF" }} color="#6C7BEA" />
-              <Text style={{ marginTop: 8, fontSize: 20, fontWeight: "700" }}>{licensePlate || "Biển số"}</Text>
+              <Avatar.Icon
+                size={64}
+                icon="car"
+                style={{ backgroundColor: "#E8ECFF" }}
+                color="#6C7BEA"
+              />
+              <Text style={{ marginTop: 8, fontSize: 20, fontWeight: "700" }}>
+                {licensePlate || "Biển số"}
+              </Text>
             </Card.Content>
           </Card>
 
@@ -126,7 +170,9 @@ export default function VehicleAdditionScreen() {
             <Card.Content>
               <List.Item
                 title="Hãng xe"
-                description={brands.find(b => b.id === brandId)?.name || "Chọn hãng xe"}
+                description={
+                  brands.find((b) => b.id === brandId)?.name || "Chọn hãng xe"
+                }
                 left={(props) => <List.Icon {...props} icon="factory" />}
                 right={(props) => <List.Icon {...props} icon="chevron-right" />}
                 onPress={() => setBrandModal(true)}
@@ -138,7 +184,9 @@ export default function VehicleAdditionScreen() {
               ) : null}
               <List.Item
                 title="Loại xe"
-                description={types.find(t => t.id === typeId)?.name || "Chọn loại xe"}
+                description={
+                  types.find((t) => t.id === typeId)?.name || "Chọn loại xe"
+                }
                 left={(props) => <List.Icon {...props} icon="shape" />}
                 right={(props) => <List.Icon {...props} icon="chevron-right" />}
                 onPress={() => setTypeModal(true)}
@@ -150,7 +198,9 @@ export default function VehicleAdditionScreen() {
               ) : null}
               <List.Item
                 title="Dòng xe"
-                description={models.find(m => m.id === modelId)?.name || "Chọn dòng xe"}
+                description={
+                  models.find((m) => m.id === modelId)?.name || "Chọn dòng xe"
+                }
                 left={(props) => <List.Icon {...props} icon="car-sports" />}
                 right={(props) => <List.Icon {...props} icon="chevron-right" />}
                 onPress={() => setModelModal(true)}
@@ -196,35 +246,86 @@ export default function VehicleAdditionScreen() {
             </Card.Content>
           </Card>
 
-          <Button mode="contained" onPress={onCreate} loading={submitting} disabled={submitting} contentStyle={{ paddingVertical: 6 }}>
+          <Button
+            mode="contained"
+            onPress={onCreate}
+            loading={submitting}
+            disabled={submitting}
+            contentStyle={{ paddingVertical: 6 }}
+          >
             Thêm xe
           </Button>
         </ScrollView>
       )}
 
       <Portal>
-        <Modal visible={brandModal} onDismiss={() => setBrandModal(false)} contentContainerStyle={{ margin: 16, backgroundColor: "white", borderRadius: 12 }}>
+        <Modal
+          visible={brandModal}
+          onDismiss={() => setBrandModal(false)}
+          contentContainerStyle={{
+            margin: 16,
+            backgroundColor: "white",
+            borderRadius: 12,
+          }}
+        >
           <ScrollView style={{ maxHeight: 360 }}>
             {brands.map((b) => (
-              <Card key={b.id} onPress={() => { setBrandId(b.id); setBrandModal(false); }} style={{ margin: 8 }}>
+              <Card
+                key={b.id}
+                onPress={() => {
+                  setBrandId(b.id);
+                  setBrandModal(false);
+                }}
+                style={{ margin: 8 }}
+              >
                 <Card.Title title={b.name} />
               </Card>
             ))}
           </ScrollView>
         </Modal>
-        <Modal visible={typeModal} onDismiss={() => setTypeModal(false)} contentContainerStyle={{ margin: 16, backgroundColor: "white", borderRadius: 12 }}>
+        <Modal
+          visible={typeModal}
+          onDismiss={() => setTypeModal(false)}
+          contentContainerStyle={{
+            margin: 16,
+            backgroundColor: "white",
+            borderRadius: 12,
+          }}
+        >
           <ScrollView style={{ maxHeight: 360 }}>
             {types.map((t) => (
-              <Card key={t.id} onPress={() => { setTypeId(t.id); setTypeModal(false); }} style={{ margin: 8 }}>
+              <Card
+                key={t.id}
+                onPress={() => {
+                  setTypeId(t.id);
+                  setTypeModal(false);
+                }}
+                style={{ margin: 8 }}
+              >
                 <Card.Title title={t.name} />
               </Card>
             ))}
           </ScrollView>
         </Modal>
-        <Modal visible={modelModal} onDismiss={() => setModelModal(false)} contentContainerStyle={{ margin: 16, backgroundColor: "white", borderRadius: 12 }}>
+        <Modal
+          visible={modelModal}
+          onDismiss={() => setModelModal(false)}
+          contentContainerStyle={{
+            margin: 16,
+            backgroundColor: "white",
+            borderRadius: 12,
+          }}
+        >
           <ScrollView style={{ maxHeight: 360 }}>
             {models.map((m) => (
-              <Card key={m.id} onPress={() => { setModelId(m.id); setModelModal(false); }} style={{ margin: 8 }}>
+              <Card
+                key={m.id}
+                onPress={() => {
+                  setModelId(m.id);
+                  setModelModal(false);
+                }}
+                style={{ margin: 8 }}
+              >
                 <Card.Title title={m.name} />
               </Card>
             ))}
@@ -242,7 +343,11 @@ export default function VehicleAdditionScreen() {
           }
         }}
         duration={1200}
-        style={{ backgroundColor: snackbar.error ? theme.colors.error : theme.colors.primary }}
+        style={{
+          backgroundColor: snackbar.error
+            ? theme.colors.error
+            : theme.colors.primary,
+        }}
       >
         {snackbar.message}
       </Snackbar>
