@@ -12,7 +12,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import authService from "../../src/services/auth.service";
+import { authService } from "../../src/services/auth.service";
 
 export default function PasswordManagementScreen() {
   const theme = useTheme();

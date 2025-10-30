@@ -126,6 +126,18 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="vehicle-management/vehicle-detail/[id]"
+              options={{
+                title: "Chi tiết xe",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
               name="history-management/booking-history/booking-history"
               options={{
                 title: "Lịch sử đặt lịch",
