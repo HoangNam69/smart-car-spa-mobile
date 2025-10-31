@@ -14,6 +14,29 @@ export interface ForgotPasswordRequest {
   new_password: string;
 }
 
+export interface SignupRequest {
+  email?: string | null;
+  password: string;
+  google_id?: string | null;
+  full_name: string;
+  phone_number: string;
+  date_of_birth: string; // ISO date string
+  gender: "MALE" | "FEMALE";
+  address: string;
+  avatar_url?: string | null;
+}
+
+export interface SignupResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: {
+    access_token?: string;
+    refresh_token?: string;
+    user_info?: UserInfo;
+  };
+}
+
 export interface LoginResponse {
   success: boolean;
   message: string;

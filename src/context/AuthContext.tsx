@@ -1,12 +1,13 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/auth.service';
 import { tokenStorage } from '../storage/tokenStorage';
-import { AuthState, LoginRequest, UserInfo } from '../types/auth.types';
+import { AuthState, LoginRequest, SignupRequest, UserInfo } from '../types/auth.types';
 import { UpdateUserRequest } from '../types/user.types';
 import { userService } from '../services/user.service';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
+  signup: (signupData: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: UpdateUserRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -55,6 +56,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
     } catch (error) {
       console.error('Login error:', error);
+      setState({
+        isAuthenticated: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        loading: false,
+      });
+      throw error;
+    }
+  };
+
+  const signup = async (signupData: SignupRequest) => {
+    try {
+      setState(prev => ({ ...prev, loading: true }));
+      
+      const response = await authService.signup(signupData);
+      
+      // Map từ snake_case (từ authService) sang camelCase
+      const accessToken = response.data.access_token || '';
+      const refreshToken = response.data.refresh_token || '';
+      const user = response.data.user_info || null;
+      
+      // Lưu tokens và user data vào storage
+      await tokenStorage.setTokens(accessToken, refreshToken);
+      if (user) {
+        await tokenStorage.setUserData(user);
+      }
+      
+      setState({
+        isAuthenticated: true,
+        user,
+        accessToken,
+        refreshToken,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Signup error:', error);
       setState({
         isAuthenticated: false,
         user: null,
@@ -158,6 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     ...state,
     login,
+    signup,
     logout,
     updateUser,
     refreshUser,
