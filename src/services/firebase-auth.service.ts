@@ -117,9 +117,13 @@ export class FirebaseAuthService {
         verifier
       );
       
+      console.log('OTP sent successfully to:', formattedPhone);
       return confirmationResult;
     } catch (error) {
-      console.log('Error sending OTP to phone:', error);
+      console.error('Error sending OTP to phone:', error);
+      console.error('Error code:', (error as any)?.code);
+      console.error('Error message:', (error as any)?.message);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       throw this.handleAuthError(error as AuthError);
     }
   }
@@ -279,9 +283,11 @@ export class FirebaseAuthService {
       };
     }
 
+    // Luôn hiển thị code và message đầy đủ để debug
+    const message = errorMessages[error.code] || error.message || 'Có lỗi xảy ra';
     return {
       code: error.code,
-      message: errorMessages[error.code] || error.message || 'Có lỗi xảy ra'
+      message: `${message} (Code: ${error.code || 'unknown'})`
     };
   }
 }
