@@ -90,6 +90,18 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="auths/forgot-password"
+              options={{
+                title: "Quên mật khẩu",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
               name="personal/personal"
               options={{
                 title: "Thông tin cá nhân",

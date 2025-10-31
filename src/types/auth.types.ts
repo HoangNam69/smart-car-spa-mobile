@@ -1,10 +1,16 @@
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  phone_number?: string;
   password: string;
 }
 
 export interface ChangePasswordRequest {
   current_password: string;
+  new_password: string;
+}
+
+export interface ForgotPasswordRequest {
+  phone_number: string;
   new_password: string;
 }
 

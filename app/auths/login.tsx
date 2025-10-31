@@ -15,29 +15,42 @@ import { LoginRequest } from "../../src/types/auth.types";
 export default function LoginScreen() {
   const router = useRouter();
   const { login, loading } = useAuth();
-  const [email, setEmail] = useState("");
+  const [loginValue, setLoginValue] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [snack, setSnack] = useState({ visible: false, msg: "" });
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!loginValue || !password) {
       setSnack({ visible: true, msg: "Vui lòng nhập đầy đủ thông tin" });
       return;
     }
 
-    // Validate email format
+    // Validate email or phone number format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setSnack({ visible: true, msg: "Vui lòng nhập email hợp lệ" });
+    const phoneRegex = /^[0-9]{10}$/;
+    
+    const isEmail = emailRegex.test(loginValue);
+    const isPhone = phoneRegex.test(loginValue);
+
+    if (!isEmail && !isPhone) {
+      setSnack({ 
+        visible: true, 
+        msg: "Vui lòng nhập email hoặc số điện thoại hợp lệ" 
+      });
       return;
     }
 
     try {
       const credentials: LoginRequest = {
-        email: email.trim(),
         password: password,
       };
+
+      if (isEmail) {
+        credentials.email = loginValue.trim();
+      } else {
+        credentials.phone_number = loginValue.trim();
+      }
 
       await login(credentials);
 
@@ -82,14 +95,15 @@ export default function LoginScreen() {
             Đăng Nhập
           </Text>
           <Text style={{ textAlign: "center", marginBottom: 16 }}>
-            Nhập vào thôn tin đăng nhập
+            Nhập vào thông tin đăng nhập
           </Text>
 
           <TextInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            label="Email hoặc số điện thoại"
+            value={loginValue}
+            onChangeText={setLoginValue}
+            keyboardType="default"
+            autoCapitalize="none"
             mode="outlined"
             style={{ marginBottom: 12 }}
           />
@@ -116,6 +130,12 @@ export default function LoginScreen() {
           >
             Đăng Nhập
           </Button>
+
+          <View style={{ alignItems: "flex-end", marginTop: 8 }}>
+            <Button compact onPress={() => router.push("/auths/forgot-password")}>
+              Quên mật khẩu?
+            </Button>
+          </View>
 
           <View
             style={{
