@@ -36,7 +36,7 @@ Thumbs.db
 /android
 
 # Google services files
-google-services.json
+# google-services.json
 GoogleService-Info.plist
 
 # @generated expo-cli sync-2b81b286409207a5da26e14c78851eb30d8ccbdb
