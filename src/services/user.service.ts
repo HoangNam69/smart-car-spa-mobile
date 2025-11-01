@@ -1,5 +1,6 @@
 import axiosInstance from "../config/axiosConfig";
-import { API_ENDPOINTS } from "../config/api.constant";
+import { API_CONFIG, API_ENDPOINTS } from "../config/api.constant";
+import { tokenStorage } from "../storage/tokenStorage";
 import { UpdateUserRequest, UpdateUserResponse, UploadAvatarResponse } from "../types/user.types";
 
 export const userService = {
@@ -25,9 +26,6 @@ export const userService = {
     userId: string,
     imageUri: string
   ): Promise<UploadAvatarResponse> {
-    // Tạo FormData
-    const formData = new FormData();
-    
     // Lấy tên file và extension từ URI
     const uriParts = imageUri.split('.');
     const fileExtension = uriParts[uriParts.length - 1].toLowerCase();
@@ -47,27 +45,48 @@ export const userService = {
     // Tạo tên file với timestamp để tránh trùng
     const fileName = `avatar_${Date.now()}.${fileExtension}`;
     
-    // Append file vào FormData (React Native format)
+    // Tạo FormData (React Native format)
+    const formData = new FormData();
     formData.append('file', {
       uri: imageUri,
       name: fileName,
       type: mimeType,
     } as any);
     
+    console.log('Uploading avatar:', {
+      fileName,
+      mimeType,
+      uri: imageUri.substring(0, 50) + '...',
+    });
+    
     // Gọi API với endpoint từ constants
     const endpoint = API_ENDPOINTS.USER.UPLOAD_AVATAR.replace('{userId}', userId);
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     
-    // Gửi FormData - axios sẽ tự động set Content-Type với boundary
-    // Không set Content-Type header để axios tự động tính toán và thêm boundary
-    // Axios sẽ tự động detect FormData và set Content-Type với boundary phù hợp
-    const config: any = {
-      headers: {},
-    };
-    // Xóa Content-Type để axios tự động set
-    delete config.headers['Content-Type'];
+    // Lấy access token
+    const token = await tokenStorage.getAccessToken();
+    if (!token) {
+      throw new Error('Không có token xác thực');
+    }
     
-    const response = await axiosInstance.post(endpoint, formData, config);
+    // Sử dụng fetch API thay vì axios để upload file
+    // fetch API trong React Native xử lý FormData tốt hơn axios
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Không set Content-Type - fetch sẽ tự động set multipart/form-data với boundary
+      },
+      body: formData,
+    });
     
-    return response.data as UploadAvatarResponse;
+    // Kiểm tra response
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data as UploadAvatarResponse;
   },
 };
