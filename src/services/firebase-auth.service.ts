@@ -1,20 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  AuthError,
-  ConfirmationResult,
-  createUserWithEmailAndPassword,
-  isSignInWithEmailLink,
-  RecaptchaVerifier,
-  sendEmailVerification,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
-  signInWithPhoneNumber,
-  signOut,
-  updateProfile,
-  User,
-} from 'firebase/auth';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
-import { auth } from '../config/firebase.config';
 
 // Types
 export interface SignupData {
@@ -38,26 +24,14 @@ export interface PhoneAuthData {
   verificationCode?: string;
 }
 
+// Type aliases for compatibility with existing code
+export type ConfirmationResult = FirebaseAuthTypes.ConfirmationResult;
+export type User = FirebaseAuthTypes.User;
+
 export class FirebaseAuthService {
   /**
-   * Tạo Recaptcha Verifier cho Phone Auth (dành cho web)
-   */
-  static createRecaptchaVerifier(elementId: string): RecaptchaVerifier {
-    const verifier = new RecaptchaVerifier(auth, elementId, {
-      size: 'normal',
-      callback: () => {
-        console.log('reCAPTCHA solved');
-      },
-      'expired-callback': () => {
-        console.log('reCAPTCHA expired');
-      },
-    });
-    return verifier;
-  }
-
-  /**
    * Gửi OTP đến số điện thoại
-   * Trên React Native, chúng ta cần tạo một RecaptchaVerifier invisible
+   * @react-native-firebase/auth tự động xử lý reCAPTCHA, không cần RecaptchaVerifier
    */
   static async sendOTPToPhone(
     phoneNumber: string
@@ -80,42 +54,8 @@ export class FirebaseAuthService {
       console.log('Formatted phone:', formattedPhone);
       console.log('Platform:', Platform.OS);
       
-      // Trên React Native/Expo, cần tạo RecaptchaVerifier
-      // Firebase sẽ tự động xử lý reCAPTCHA qua native code trên mobile
-      // Trên React Native, không cần DOM element thực sự
-      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          console.log('reCAPTCHA solved');
-        },
-        'expired-callback': () => {
-          console.log('reCAPTCHA expired');
-        },
-      } as any);
-      
-      // Chỉ render trên web (có DOM)
-      // Trên React Native, Firebase sẽ tự động xử lý khi gọi signInWithPhoneNumber
-      if (Platform.OS === 'web') {
-        try {
-          // Tìm hoặc tạo container element cho web
-          let container = document.getElementById('recaptcha-container');
-          if (!container) {
-            container = document.createElement('div');
-            container.id = 'recaptcha-container';
-            container.style.display = 'none';
-            document.body.appendChild(container);
-          }
-          await verifier.render();
-        } catch (renderError) {
-          console.log('Render error (may be normal on some platforms):', renderError);
-        }
-      }
-      
-      const confirmationResult = await signInWithPhoneNumber(
-        auth,
-        formattedPhone,
-        verifier
-      );
+      // @react-native-firebase/auth automatically handles reCAPTCHA/Play Integrity
+      const confirmationResult = await auth().signInWithPhoneNumber(formattedPhone);
       
       console.log('OTP sent successfully to:', formattedPhone);
       return confirmationResult;
@@ -124,7 +64,11 @@ export class FirebaseAuthService {
       console.error('Error code:', (error as any)?.code);
       console.error('Error message:', (error as any)?.message);
       console.error('Error details:', JSON.stringify(error, null, 2));
-      throw this.handleAuthError(error as AuthError);
+      
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
@@ -137,19 +81,16 @@ export class FirebaseAuthService {
   ): Promise<User> {
     try {
       const result = await confirmationResult.confirm(otpCode);
+      if (!result || !result.user) {
+        throw new Error('Xác thực OTP không thành công');
+      }
       return result.user;
     } catch (error) {
       console.log('Error verifying phone OTP:', error);
-      throw this.handleAuthError(error as AuthError);
-    }
-  }
-
-  /**
-   * Xóa Recaptcha Verifier
-   */
-  static clearRecaptchaVerifier(verifier: RecaptchaVerifier): void {
-    if (verifier) {
-      verifier.clear();
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
@@ -163,13 +104,16 @@ export class FirebaseAuthService {
         handleCodeInApp: true,
       };
       
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      await auth().sendSignInLinkToEmail(email, actionCodeSettings);
       
       // Lưu email vào AsyncStorage để verify sau
       await AsyncStorage.setItem('emailForSignIn', email);
     } catch (error) {
       console.log('Error sending OTP to email:', error);
-      throw this.handleAuthError(error as AuthError);
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
@@ -180,15 +124,18 @@ export class FirebaseAuthService {
     try {
       const email = await AsyncStorage.getItem('emailForSignIn');
       
-      if (email && isSignInWithEmailLink(auth, '')) {
-        const result = await signInWithEmailLink(auth, email, '');
+      if (email && await auth().isSignInWithEmailLink('')) {
+        const result = await auth().signInWithEmailLink(email, '');
         await AsyncStorage.removeItem('emailForSignIn');
         return result.user;
       }
       return null;
     } catch (error) {
       console.log('Error verifying email link:', error);
-      throw this.handleAuthError(error as AuthError);
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
@@ -197,18 +144,21 @@ export class FirebaseAuthService {
    */
   static async createAccount(email: string, password: string, displayName: string): Promise<User> {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await auth().createUserWithEmailAndPassword(email, password);
       
       // Cập nhật display name
-      await updateProfile(result.user, { displayName });
+      await result.user.updateProfile({ displayName });
       
       // Gửi email xác thực (optional)
-      await sendEmailVerification(result.user);
+      await result.user.sendEmailVerification();
       
       return result.user;
     } catch (error) {
       console.log('Error creating account:', error);
-      throw this.handleAuthError(error as AuthError);
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
@@ -217,18 +167,21 @@ export class FirebaseAuthService {
    */
   static async signOutFromFirebase(): Promise<void> {
     try {
-      await signOut(auth);
+      await auth().signOut();
     } catch (error) {
       console.log('Error signing out:', error);
-      throw this.handleAuthError(error as AuthError);
+      const firebaseError = this.handleAuthError(error as any);
+      const errorToThrow = new Error(firebaseError.message);
+      (errorToThrow as any).code = firebaseError.code;
+      throw errorToThrow;
     }
   }
 
   /**
    * Kiểm tra xem có phải email link không
    */
-  static isEmailLink(): boolean {
-    return isSignInWithEmailLink(auth, '');
+  static async isEmailLink(): Promise<boolean> {
+    return await auth().isSignInWithEmailLink('');
   }
 
   /**
@@ -248,7 +201,7 @@ export class FirebaseAuthService {
   /**
    * Xử lý lỗi Firebase Auth
    */
-  private static handleAuthError(error: AuthError): FirebaseAuthError {
+  private static handleAuthError(error: any): FirebaseAuthError {
     const errorMessages: { [key: string]: string } = {
       'auth/email-already-in-use': 'Email này đã được sử dụng',
       'auth/invalid-email': 'Email không hợp lệ',
@@ -270,18 +223,9 @@ export class FirebaseAuthService {
       'auth/session-expired': 'Phiên đăng nhập đã hết hạn',
       'auth/invalid-verification-id': 'Mã xác thực không hợp lệ',
       'auth/missing-phone-number': 'Vui lòng nhập số điện thoại',
+      // @react-native-firebase specific error codes
+      'auth/app-not-authorized': 'Ứng dụng chưa được ủy quyền',
     };
-
-    // Xử lý lỗi đặc biệt cho React Native
-    const errorMessage = error.message || '';
-    if (errorMessage.includes('Unable to load external scripts') || 
-        errorMessage.includes('external scripts') ||
-        errorMessage.includes('loadJS')) {
-      return {
-        code: 'auth/reCAPTCHA-error',
-        message: 'Firebase Phone Auth cần native code. Vui lòng build development build với lệnh: npx expo run:android hoặc npx expo run:ios. Không thể dùng Expo Go cho tính năng này.'
-      };
-    }
 
     // Luôn hiển thị code và message đầy đủ để debug
     const message = errorMessages[error.code] || error.message || 'Có lỗi xảy ra';
@@ -291,4 +235,3 @@ export class FirebaseAuthService {
     };
   }
 }
-

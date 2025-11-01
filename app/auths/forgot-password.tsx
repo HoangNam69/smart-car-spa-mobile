@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import { ConfirmationResult } from "firebase/auth";
 import { useEffect, useState } from "react";
 import {
     Image,
@@ -12,7 +11,7 @@ import {
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authService } from "../../src/services/auth.service";
-import { FirebaseAuthService } from "../../src/services/firebase-auth.service";
+import { ConfirmationResult, FirebaseAuthService } from "../../src/services/firebase-auth.service";
 import { ForgotPasswordRequest } from "../../src/types/auth.types";
 
 export default function ForgotPasswordScreen() {

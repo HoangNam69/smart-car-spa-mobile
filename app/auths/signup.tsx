@@ -11,9 +11,8 @@ import {
 import { Button, Checkbox, Snackbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
-import { FirebaseAuthService } from "../../src/services/firebase-auth.service";
+import { ConfirmationResult, FirebaseAuthService } from "../../src/services/firebase-auth.service";
 import { SignupRequest } from "../../src/types/auth.types";
-import { ConfirmationResult } from "firebase/auth";
 
 export default function SignupScreen() {
   const router = useRouter();
