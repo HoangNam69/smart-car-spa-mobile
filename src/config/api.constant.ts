@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     CREATE: "/users/create",
     UPDATE: "/users/{id}/update",
     DELETE: "/users/{id}/delete",
+    UPLOAD_AVATAR: "/users/{userId}/avatar/upload",
   },
   BOOKING: {
     GET_ALL: "/bookings",

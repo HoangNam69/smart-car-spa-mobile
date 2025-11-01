@@ -10,6 +10,7 @@ interface AuthContextType extends AuthState {
   signup: (signupData: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: UpdateUserRequest) => Promise<void>;
+  uploadAvatar: (imageUri: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -141,6 +142,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Upload avatar cho user
+  const uploadAvatar = async (imageUri: string) => {
+    try {
+      const userId = state.user?.user_id;
+      if (!userId) throw new Error('No user id');
+      const response = await userService.uploadAvatar(userId, imageUri);
+      
+      // Backend trả về data với các field (có thể là camelCase hoặc snake_case)
+      const responseData = response.data;
+      
+      // Lấy avatar_url mới (hỗ trợ cả camelCase và snake_case)
+      const newAvatarUrl = responseData.avatarUrl || responseData.avatar_url || null;
+      
+      // Nếu backend trả về full user object (có user_id hoặc userId), map toàn bộ
+      if (responseData.user_id || responseData.userId) {
+        const mappedUser: UserInfo = {
+          user_id: responseData.user_id || responseData.userId || state.user?.user_id || '',
+          email: responseData.email || state.user?.email || '',
+          full_name: responseData.full_name || responseData.fullName || state.user?.full_name || '',
+          phone_number: responseData.phone_number || responseData.phoneNumber || state.user?.phone_number || '',
+          date_of_birth: responseData.date_of_birth || responseData.dateOfBirth || state.user?.date_of_birth || null,
+          gender: responseData.gender || state.user?.gender || 'MALE',
+          address: responseData.address || state.user?.address || '',
+          avatar_url: newAvatarUrl,
+        };
+        await tokenStorage.setUserData(mappedUser);
+        setState(prev => ({ ...prev, user: mappedUser }));
+      } else {
+        // Chỉ cập nhật avatar_url nếu backend chỉ trả về một số field
+        const updatedUser = {
+          ...state.user,
+          avatar_url: newAvatarUrl,
+        } as UserInfo;
+        await tokenStorage.setUserData(updatedUser);
+        setState(prev => ({ ...prev, user: updatedUser }));
+      }
+    } catch (error) {
+      console.error('Upload avatar error:', error);
+      throw error;
+    }
+  };
+
   // Làm mới thông tin user từ server (khi cần lấy dữ liệu mới nhất)
   const refreshUser = async () => {
     try {
@@ -199,6 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signup,
     logout,
     updateUser,
+    uploadAvatar,
     refreshUser,
   };
 

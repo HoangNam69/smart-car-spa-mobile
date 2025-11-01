@@ -1,6 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
+
+// Lazy load Firebase để tránh lỗi khi chạy trong Expo Go
+let firebaseAuth: typeof import('@react-native-firebase/auth').default | null = null;
+
+async function getFirebaseAuth() {
+  if (!firebaseAuth) {
+    try {
+      const authModule = await import('@react-native-firebase/auth');
+      firebaseAuth = authModule.default;
+      return firebaseAuth;
+    } catch {
+      throw new Error(
+        'Firebase Auth không khả dụng. Vui lòng sử dụng development build hoặc build native app.\n' +
+        'Native module RNFBAppModule not found. Re-check module install, linking, configuration, build and install steps.'
+      );
+    }
+  }
+  return firebaseAuth;
+}
 
 // Types
 export interface SignupData {
@@ -25,8 +43,18 @@ export interface PhoneAuthData {
 }
 
 // Type aliases for compatibility with existing code
-export type ConfirmationResult = FirebaseAuthTypes.ConfirmationResult;
-export type User = FirebaseAuthTypes.User;
+// Định nghĩa types tương thích với Firebase để tránh phụ thuộc vào import ở top-level
+// Sử dụng any cho ConfirmationResult vì type từ Firebase phức tạp và phụ thuộc vào native module
+export type ConfirmationResult = any;
+
+export interface User {
+  uid: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  displayName?: string | null;
+  updateProfile: (profile: { displayName?: string }) => Promise<void>;
+  sendEmailVerification: () => Promise<void>;
+}
 
 export class FirebaseAuthService {
   /**
@@ -37,6 +65,9 @@ export class FirebaseAuthService {
     phoneNumber: string
   ): Promise<ConfirmationResult> {
     try {
+      // Lazy load Firebase
+      const authInstance = await getFirebaseAuth();
+      
       // Ensure phone number has country code
       let formattedPhone = phoneNumber.trim();
       
@@ -55,7 +86,7 @@ export class FirebaseAuthService {
       console.log('Platform:', Platform.OS);
       
       // @react-native-firebase/auth automatically handles reCAPTCHA/Play Integrity
-      const confirmationResult = await auth().signInWithPhoneNumber(formattedPhone);
+      const confirmationResult = await authInstance().signInWithPhoneNumber(formattedPhone);
       
       console.log('OTP sent successfully to:', formattedPhone);
       return confirmationResult;
@@ -99,12 +130,13 @@ export class FirebaseAuthService {
    */
   static async sendOTPToEmail(email: string): Promise<void> {
     try {
+      const authInstance = await getFirebaseAuth();
       const actionCodeSettings = {
         url: 'smartcarspamobile://auth/verify-email',
         handleCodeInApp: true,
       };
       
-      await auth().sendSignInLinkToEmail(email, actionCodeSettings);
+      await authInstance().sendSignInLinkToEmail(email, actionCodeSettings);
       
       // Lưu email vào AsyncStorage để verify sau
       await AsyncStorage.setItem('emailForSignIn', email);
@@ -122,10 +154,11 @@ export class FirebaseAuthService {
    */
   static async verifyEmailLink(): Promise<User | null> {
     try {
+      const authInstance = await getFirebaseAuth();
       const email = await AsyncStorage.getItem('emailForSignIn');
       
-      if (email && await auth().isSignInWithEmailLink('')) {
-        const result = await auth().signInWithEmailLink(email, '');
+      if (email && await authInstance().isSignInWithEmailLink('')) {
+        const result = await authInstance().signInWithEmailLink(email, '');
         await AsyncStorage.removeItem('emailForSignIn');
         return result.user;
       }
@@ -144,7 +177,8 @@ export class FirebaseAuthService {
    */
   static async createAccount(email: string, password: string, displayName: string): Promise<User> {
     try {
-      const result = await auth().createUserWithEmailAndPassword(email, password);
+      const authInstance = await getFirebaseAuth();
+      const result = await authInstance().createUserWithEmailAndPassword(email, password);
       
       // Cập nhật display name
       await result.user.updateProfile({ displayName });
@@ -167,7 +201,8 @@ export class FirebaseAuthService {
    */
   static async signOutFromFirebase(): Promise<void> {
     try {
-      await auth().signOut();
+      const authInstance = await getFirebaseAuth();
+      await authInstance().signOut();
     } catch (error) {
       console.log('Error signing out:', error);
       const firebaseError = this.handleAuthError(error as any);
@@ -181,7 +216,13 @@ export class FirebaseAuthService {
    * Kiểm tra xem có phải email link không
    */
   static async isEmailLink(): Promise<boolean> {
-    return await auth().isSignInWithEmailLink('');
+    try {
+      const authInstance = await getFirebaseAuth();
+      return await authInstance().isSignInWithEmailLink('');
+    } catch (error) {
+      console.log('Error checking email link:', error);
+      return false;
+    }
   }
 
   /**

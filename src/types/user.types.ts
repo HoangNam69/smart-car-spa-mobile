@@ -208,3 +208,16 @@ export interface UpdateUserErrorResponse {
   path: string;
   errorCode: string;
 }
+
+// Upload Avatar Response (same structure as UpdateUserResponse)
+export interface UploadAvatarResponse {
+  success: boolean;
+  message: string;
+  data: {
+    userId: string;
+    fullName: string;
+    email: string;
+    avatarUrl: string;
+    [key: string]: any; // Allow other fields from backend
+  };
+}

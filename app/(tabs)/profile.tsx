@@ -115,6 +115,18 @@ export default function ProfileScreen() {
   const fullName = user.full_name || "";
   const email = user.email || "";
   const phoneNumber = user.phone_number || "";
+  const avatarUrl = user.avatar_url || null;
+
+  // Tính initials từ fullName (giống như personal.tsx)
+  const getInitials = (name: string): string => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? "";
+    const last = parts[parts.length - 1]?.[0] ?? "";
+    return (first + last).toUpperCase();
+  };
+
+  const initials = getInitials(fullName);
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -128,11 +140,19 @@ export default function ProfileScreen() {
                 marginBottom: 16,
               }}
             >
-              <Avatar.Text
-                size={60}
-                label={fullName.charAt(0).toUpperCase()}
-                style={{ marginRight: 16 }}
-              />
+              {avatarUrl ? (
+                <Avatar.Image
+                  size={60}
+                  source={{ uri: avatarUrl }}
+                  style={{ marginRight: 16 }}
+                />
+              ) : (
+                <Avatar.Text
+                  size={60}
+                  label={initials}
+                  style={{ marginRight: 16 }}
+                />
+              )}
               <View style={{ flex: 1 }}>
                 <Text variant="headlineSmall" style={{ fontWeight: "bold" }}>
                   {fullName}

@@ -66,7 +66,7 @@ function parseDateInput(input: string): string | undefined {
 
 export default function PersonalScreen() {
   const theme = useTheme();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, uploadAvatar } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone_number ?? "");
@@ -87,6 +87,7 @@ export default function PersonalScreen() {
   );
 
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
   const [snackbar, setSnackbar] = useState<{
     visible: boolean;
@@ -125,6 +126,45 @@ export default function PersonalScreen() {
     setAvatarUri(user?.avatar_url ?? "");
   }, [user]);
 
+  // Handle avatar change - upload immediately
+  async function handleAvatarChange(newUri: string | null) {
+    if (!newUri) {
+      setAvatarUri(null);
+      return;
+    }
+
+    // Nếu URI là từ server (http/https), chỉ cập nhật state
+    if (newUri.startsWith('http://') || newUri.startsWith('https://')) {
+      setAvatarUri(newUri);
+      return;
+    }
+
+    // Nếu URI là local (file://), upload lên server
+    setAvatarUri(newUri); // Cập nhật UI ngay lập tức
+    setUploadingAvatar(true);
+
+    try {
+      await uploadAvatar(newUri);
+      // Sau khi upload thành công, avatar_url đã được cập nhật trong context
+      // Lấy avatar_url mới từ user context
+      setSnackbar({
+        visible: true,
+        message: "Cập nhật avatar thành công!",
+        error: false,
+      });
+    } catch (err: any) {
+      // Nếu upload thất bại, giữ lại avatar cũ
+      setAvatarUri(user?.avatar_url ?? null);
+      setSnackbar({
+        visible: true,
+        message: err?.message || "Cập nhật avatar thất bại, vui lòng thử lại.",
+        error: true,
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   const initials = useMemo(() => {
     if (!fullName) return "?";
     const parts = fullName.trim().split(/\s+/);
@@ -161,6 +201,10 @@ export default function PersonalScreen() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      // Lấy avatar_url từ user context (đã được cập nhật sau khi upload)
+      // Nếu avatarUri vẫn là local URI, có nghĩa là chưa upload thành công, sử dụng avatar cũ
+      const currentAvatarUrl = user?.avatar_url ?? avatarUri ?? "";
+      
       await updateUser({
         full_name: fullName.trim(),
         phone_number: phone.trim() || "",
@@ -168,7 +212,7 @@ export default function PersonalScreen() {
         date_of_birth: dob ? dob.toISOString().slice(0, 10) : "",
         gender: toBackendGender(gender) || "MALE",
         address: address.trim() || "",
-        avatar_url: avatarUri ?? "",
+        avatar_url: currentAvatarUrl,
       });
       setSnackbar({
         visible: true,
@@ -198,8 +242,13 @@ export default function PersonalScreen() {
               uri={avatarUri}
               label={initials}
               size={100}
-              onChange={setAvatarUri}
+              onChange={handleAvatarChange}
             />
+            {uploadingAvatar && (
+              <Text style={{ marginTop: 8, fontSize: 12, color: theme.colors.primary }}>
+                Đang tải ảnh lên...
+              </Text>
+            )}
             <Text style={{ marginTop: 12, fontSize: 18, fontWeight: "600" }}>
               {fullName || "Khách hàng"}
             </Text>
