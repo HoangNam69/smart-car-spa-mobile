@@ -64,4 +64,20 @@ export const bookingService = {
       return null;
     }
   },
+
+  async updateBooking(bookingId: string, data: any): Promise<BookingInfoDto> {
+    const res = await axiosInstance.post(`/bookings/${bookingId}/update`, data);
+    const api = res.data;
+    if (!api?.success || !api?.data)
+      throw new Error(api?.message || "Cập nhật booking thất bại");
+    return api.data as BookingInfoDto;
+  },
+
+  async cancelBooking(bookingId: string, reason?: string): Promise<BookingInfoDto> {
+    const res = await axiosInstance.post(`/bookings/${bookingId}/cancel`, { cancellation_reason: reason });
+    const api = res.data;
+    if (!api?.success || !api?.data)
+      throw new Error(api?.message || "Hủy booking thất bại");
+    return api.data as BookingInfoDto;
+  },
 };

@@ -108,8 +108,15 @@ class AuthService {
       await axiosInstance.post("/auth/logout", {
         refresh_token: refreshToken,
       });
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch (error: any) {
+      // Logout có thể fail nếu token đã hết hạn (401) - đây là trường hợp bình thường
+      // Không throw error để đảm bảo user vẫn có thể logout và clear local state
+      if (error?.response?.status === 401) {
+        console.log("Logout with expired token - this is normal");
+      } else {
+        console.error("Logout error:", error);
+      }
+      // Không throw error - cho phép logout tiếp tục clear local state
     }
   }
 

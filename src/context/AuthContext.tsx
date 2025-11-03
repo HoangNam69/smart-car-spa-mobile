@@ -108,12 +108,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       const refreshToken = await tokenStorage.getRefreshToken();
+      // Gọi logout API (không quan trọng nếu fail - vẫn clear local state)
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch (error: any) {
+      // Logout có thể fail nếu token đã hết hạn (401) - đây là trường hợp bình thường
+      // Không throw error để đảm bảo user vẫn có thể logout
+      if (error?.response?.status !== 401) {
+        console.error('Logout error:', error);
+      }
     } finally {
+      // Luôn clear local state và tokens dù API call có thành công hay không
+      // Điều này đảm bảo user luôn có thể logout
       await tokenStorage.clearTokens();
       setState({
         isAuthenticated: false,

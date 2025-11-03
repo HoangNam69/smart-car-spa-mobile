@@ -1,18 +1,42 @@
-import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
-import { ActivityIndicator, Badge, Card, Chip, Text } from "react-native-paper";
+import {
+  ActivityIndicator,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  Portal,
+  Snackbar,
+  Text,
+  useTheme,
+} from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
-import { bookingService, type BookingInfoDto } from "../../../src/services/booking.service";
+import { bookingService, type BookingInfoDto as BookingServiceDto } from "../../../src/services/booking.service";
 
 export default function BookingHistoryScreen() {
+  const theme = useTheme();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [bookings, setBookings] = useState<BookingInfoDto[]>([]);
+  const [bookings, setBookings] = useState<BookingServiceDto[]>([]);
   const [tab, setTab] = useState<
     "ALL" | "PENDING" | "CONFIRMED" | "CHECKED_IN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
   >("ALL");
+  
+  // Cancel booking states
+  const [cancelModal, setCancelModal] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState<BookingServiceDto | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; error?: boolean }>({
+    visible: false,
+    message: "",
+    error: false,
+  });
 
   const fetchData = useCallback(async () => {
     if (!user?.user_id) return;
@@ -27,9 +51,23 @@ export default function BookingHistoryScreen() {
     }
   }, [user?.user_id]);
 
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     fetchData();
+    isInitialMount.current = false;
   }, [fetchData]);
+
+  // Reload data when screen comes into focus (e.g., after updating/cancelling booking)
+  // Skip the first mount to avoid double fetch
+  useFocusEffect(
+    useCallback(() => {
+      // Only reload if this is not the initial mount
+      if (!isInitialMount.current) {
+        fetchData();
+      }
+    }, [fetchData])
+  );
 
   const onRefresh = useCallback(async () => {
     if (!user?.user_id) return;
@@ -59,8 +97,52 @@ export default function BookingHistoryScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: BookingInfoDto }) => (
-    <Card style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}>
+  const handleCancelBooking = async () => {
+    if (!cancellingBooking) return;
+    setCancelling(true);
+    try {
+      await bookingService.cancelBooking(cancellingBooking.booking_id);
+      // Đóng modal ngay lập tức khi thành công
+      setCancelModal(false);
+      setCancellingBooking(null);
+      setSnackbar({ visible: true, message: "Hủy booking thành công!", error: false });
+      // Refresh bookings
+      await fetchData();
+    } catch (e: any) {
+      setSnackbar({ visible: true, message: e?.message || "Hủy booking thất bại", error: true });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const openCancelModal = (booking: BookingServiceDto) => {
+    setCancellingBooking(booking);
+    setCancelModal(true);
+  };
+
+  const closeCancelModal = () => {
+    setCancelModal(false);
+    setCancellingBooking(null);
+  };
+
+  const canCancelBooking = (status?: string) => {
+    const statusUpper = (status || "").toUpperCase();
+    return statusUpper === "PENDING" || statusUpper === "CONFIRMED";
+  };
+
+  const canUpdateBooking = (status?: string) => {
+    const statusUpper = (status || "").toUpperCase();
+    return statusUpper === "PENDING" || statusUpper === "CONFIRMED" || statusUpper === "CHECKED_IN";
+  };
+
+  const renderItem = ({ item }: { item: BookingServiceDto }) => (
+    <Card
+      style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}
+      onPress={() => {
+        router.push(`/history-management/booking-history/booking-detail/${item.booking_id}` as any);
+      }}
+      mode="elevated"
+    >
       <Card.Title
         title={item.booking_code}
         subtitle={`${new Date(item.scheduled_start_at).toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
@@ -81,7 +163,7 @@ export default function BookingHistoryScreen() {
             </Text>
           </View>
         ) : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, marginBottom: 12 }}>
           <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
             {item.bay_name || "Bay"}
           </Chip>
@@ -91,6 +173,35 @@ export default function BookingHistoryScreen() {
           <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
             {item.status}
           </Chip>
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {canUpdateBooking(item.status) && (
+            <Button
+              mode="outlined"
+              icon="pencil"
+              onPress={() => {
+                router.push(`/history-management/booking-history/update-booking/${item.booking_id}`);
+              }}
+              contentStyle={{ paddingVertical: 4 }}
+              labelStyle={{ fontSize: 14 }}
+              style={{ flex: 1 }}
+            >
+              Cập nhật
+            </Button>
+          )}
+          {canCancelBooking(item.status) && (
+            <Button
+              mode="outlined"
+              icon="close-circle"
+              onPress={() => openCancelModal(item)}
+              contentStyle={{ paddingVertical: 4 }}
+              labelStyle={{ fontSize: 14, color: "#ff4d4f" }}
+              style={{ flex: 1, borderColor: "#ff4d4f" }}
+              textColor="#ff4d4f"
+            >
+              Hủy
+            </Button>
+          )}
         </View>
       </Card.Content>
     </Card>
@@ -143,16 +254,24 @@ export default function BookingHistoryScreen() {
                 { key: "CANCELLED", label: `Hủy (${counts.CANCELLED})` },
               ]}
               keyExtractor={(i) => i.key}
-              renderItem={({ item }) => (
-                <Chip
-                  selected={tab === (item.key as typeof tab)}
-                  onPress={() => setTab(item.key as typeof tab)}
-                  style={{ marginRight: 8, marginVertical: 6 }}
-                  compact
-                >
-                  {item.label}
-                </Chip>
-              )}
+              renderItem={({ item }) => {
+                const isSelected = tab === (item.key as typeof tab);
+                return (
+                  <Chip
+                    selected={isSelected}
+                    onPress={() => setTab(item.key as typeof tab)}
+                    style={{
+                      marginRight: 8,
+                      marginVertical: 6,
+                      backgroundColor: isSelected ? "#E8F5E9" : undefined,
+                    }}
+                    selectedColor={isSelected ? "#2E7D32" : undefined}
+                    compact
+                  >
+                    {item.label}
+                  </Chip>
+                );
+              }}
               horizontal
               showsHorizontalScrollIndicator={false}
             />
@@ -166,6 +285,42 @@ export default function BookingHistoryScreen() {
           />
         </View>
       )}
+
+      {/* Cancel Booking Dialog */}
+      <Portal>
+        <Dialog visible={cancelModal} onDismiss={closeCancelModal}>
+          <Dialog.Title>Xác nhận hủy booking</Dialog.Title>
+          <Dialog.Content>
+            <Text>
+              Bạn có chắc chắn muốn hủy booking{" "}
+              <Text style={{ fontWeight: "600" }}>{cancellingBooking?.booking_code}</Text> không?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={closeCancelModal} disabled={cancelling}>
+              Đóng
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleCancelBooking}
+              loading={cancelling}
+              disabled={cancelling}
+              buttonColor="#ff4d4f"
+            >
+              Xác nhận hủy
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar
+        visible={snackbar.visible}
+        onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
+        duration={3000}
+        style={{ backgroundColor: snackbar.error ? theme.colors.error : theme.colors.primary }}
+      >
+        {snackbar.message}
+      </Snackbar>
     </SafeAreaView>
   );
 }

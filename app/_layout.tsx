@@ -162,6 +162,30 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="history-management/booking-history/update-booking/[id]"
+              options={{
+                title: "Cập nhật đặt lịch",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
+              name="history-management/booking-history/booking-detail/[id]"
+              options={{
+                title: "Chi tiết đặt lịch",
+                headerTitleAlign: "center",
+                headerTintColor: "#33363F",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+              }}
+            />
+            <Stack.Screen
               name="history-management/care-history/care-history"
               options={{
                 title: "Theo dõi hệ thống chăm sóc xe",
