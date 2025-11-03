@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: "http://172.23.128.1:8081/api",
-  TIMEOUT: 10000, // 10 seconds
+  BASE_URL: "http://127.0.0.1:8081/api",
+  TIMEOUT: 30000, // 30 seconds
   RETRY_ATTEMPTS: 3,
 } as const;
 
@@ -50,6 +50,17 @@ export const API_ENDPOINTS = {
     CREATE: "/branches/create",
     UPDATE: "/branches/{id}/update",
     DELETE: "/branches/{id}/delete",
+  },
+  PRODUCT: {
+    GET_ALL_PUBLIC: "/products/get-all", // Backend endpoint for all products
+    GET_FEATURED: "/products/featured", // Featured products
+    GET_BY_URL: "/products/url/{url}", // Get product by URL slug
+    GET_BY_ID: "/products/{id}",
+    SEARCH: "/products/search",
+  },
+  PRICING: {
+    PREVIEW: "/pricing/preview",
+    PREVIEW_BATCH: "/pricing/preview/batch",
   },
 } as const;
 
