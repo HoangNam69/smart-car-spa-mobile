@@ -24,7 +24,7 @@ import { BranchDisplay, branchService } from "../../../../src/services/branch.se
 import { PriceBookItem, pricingService } from "../../../../src/services/pricing.service";
 import { ServiceBay, serviceBayService } from "../../../../src/services/serviceBay.service";
 import { VehicleProfileDto, vehicleProfileService } from "../../../../src/services/vehicleProfile.service";
-import { BookingInfoDto } from "../../../../src/types/booking.types";
+import { BookingInfoDto, CreateBookingItemRequest } from "../../../../src/types/booking.types";
 
 interface SelectedSlot {
   bayId: string;
@@ -51,6 +51,7 @@ export default function UpdateBookingScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleProfileDto | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(null);
   const [selectedItems, setSelectedItems] = useState<PriceBookItem[]>([]);
+  const [originalItems, setOriginalItems] = useState<PriceBookItem[]>([]); // Store original services from initialData
   const [originalTotalDuration, setOriginalTotalDuration] = useState<number>(0);
   const [selectedBay, setSelectedBay] = useState<ServiceBay | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
@@ -167,14 +168,47 @@ export default function UpdateBookingScreen() {
         const seenServiceIds = new Set<string>();
 
         bookingData.booking_items.forEach((item) => {
+          console.log("🔍 Processing booking item:", {
+            service_id: item.service_id,
+            item_name: item.item_name,
+          });
+
+          // Primary: Try to match by service_id
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
             const priceBookItem = servicesData.find(
               (s) => s.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
+              console.log("✅ Found matching service by service_id:", {
+                item_id: priceBookItem.item_id,
+                item_name: priceBookItem.item_name,
+                service: priceBookItem.service?.service_name,
+              });
               services.push(priceBookItem);
               seenServiceIds.add(item.service_id);
               seenServiceIds.add(priceBookItem.item_id);
+            } else {
+              console.warn("⚠️ Service not found by service_id:", item.service_id);
+            }
+          } else if (!item.service_id && item.item_name) {
+            // Fallback: Try to match by item_name if service_id is null
+            console.log("⚠️ service_id is null, trying to match by item_name:", item.item_name);
+            const priceBookItem = servicesData.find(
+              (s) => s.item_name === item.item_name && s.service && !seenServiceIds.has(s.item_id)
+            );
+            if (priceBookItem) {
+              console.log("✅ Found matching service by item_name:", {
+                item_id: priceBookItem.item_id,
+                item_name: priceBookItem.item_name,
+                service_id: priceBookItem.service?.service_id,
+              });
+              services.push(priceBookItem);
+              if (priceBookItem.service?.service_id) {
+                seenServiceIds.add(priceBookItem.service.service_id);
+              }
+              seenServiceIds.add(priceBookItem.item_id);
+            } else {
+              console.warn("⚠️ Service not found by item_name:", item.item_name);
             }
           }
         });
@@ -183,8 +217,18 @@ export default function UpdateBookingScreen() {
           i === self.findIndex((sv) => sv.item_id === s.item_id)
         );
 
+        console.log("📋 Final services array:", {
+          originalCount: bookingData.booking_items.length,
+          uniqueCount: uniqueServices.length,
+          services: uniqueServices.map((s) => ({
+            item_name: s.item_name,
+            service_id: s.service?.service_id,
+          })),
+        });
+
         if (uniqueServices.length > 0) {
           setSelectedItems(uniqueServices);
+          setOriginalItems([...uniqueServices]); // Store original services
           const originalDuration = uniqueServices.reduce((sum, item) => {
             if (item.service) {
               return sum + (item.service.estimated_duration || 60);
@@ -192,9 +236,19 @@ export default function UpdateBookingScreen() {
             return sum;
           }, 0);
           setOriginalTotalDuration(originalDuration);
+        } else {
+          // No services found, but we still need to set originalTotalDuration
+          setOriginalItems([]);
+          if (bookingData.estimated_duration_minutes) {
+            setOriginalTotalDuration(bookingData.estimated_duration_minutes);
+          }
         }
       } else if (bookingData.estimated_duration_minutes) {
+        setOriginalItems([]);
         setOriginalTotalDuration(bookingData.estimated_duration_minutes);
+      } else {
+        setOriginalItems([]);
+        setOriginalTotalDuration(0);
       }
 
       // Load service bays for selected branch and set bay/slot
@@ -243,6 +297,20 @@ export default function UpdateBookingScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Reset state when component unmounts or booking changes
+  useEffect(() => {
+    return () => {
+      // Reset state when component unmounts
+      setSelectedItems([]);
+      setOriginalItems([]);
+      setOriginalTotalDuration(0);
+      setSelectedSlot(null);
+      setOriginalSlot(null);
+      setIsSlotChanged(false);
+      isInitialized.current = false;
+    };
+  }, [bookingId]);
 
   // Helper function to format date to YYYY-MM-DD without timezone conversion
   const formatDateString = (date: Date): string => {
@@ -455,6 +523,80 @@ export default function UpdateBookingScreen() {
     [canSelectSlot, bookingDate, totalDuration, isDurationExceedsOriginal]
   );
 
+  // Helper function to build booking_items array for API
+  const buildBookingItemsArray = useCallback((): CreateBookingItemRequest[] => {
+    const bookingItems: CreateBookingItemRequest[] = [];
+    
+    // Get service IDs from original and selected items
+    const originalServiceIds = new Set(
+      originalItems
+        .map((item) => item.service?.service_id)
+        .filter((id): id is string => !!id)
+    );
+    const selectedServiceIds = new Set(
+      selectedItems
+        .map((item) => item.service?.service_id)
+        .filter((id): id is string => !!id)
+    );
+
+    console.log("🔍 Building booking_items array:", {
+      originalServiceIds: Array.from(originalServiceIds),
+      selectedServiceIds: Array.from(selectedServiceIds),
+      originalItemsCount: originalItems.length,
+      selectedItemsCount: selectedItems.length,
+    });
+
+    // Step 1: Handle DELETE operations (items in original but not in selected)
+    // Backend processes DELETE first, so we add them first
+    // Use service_id only for deletion (not booking_item_id)
+    originalServiceIds.forEach((serviceId) => {
+      if (!selectedServiceIds.has(serviceId) && serviceId) {
+        // Item needs to be deleted - use service_id only
+        const originalItem = originalItems.find(
+          (item) => item.service?.service_id === serviceId
+        );
+        bookingItems.push({
+          service_id: serviceId,
+          operation: "DELETE",
+        });
+        console.log("🗑️ Adding DELETE item (by service_id):", {
+          service_id: serviceId,
+          item_name: originalItem?.item_name,
+        });
+      }
+    });
+
+    // Step 2: Handle ADD operations (items in selected but not in original)
+    // Only send items that are new (not in original)
+    selectedItems.forEach((item) => {
+      const serviceId = item.service?.service_id;
+      if (!serviceId) {
+        console.warn("⚠️ Skipping item without service_id:", item);
+        return;
+      }
+
+      const isNew = !originalServiceIds.has(serviceId);
+      if (isNew) {
+        // ADD: New item - send service_id and item_name
+        const bookingItem: CreateBookingItemRequest = {
+          service_id: serviceId,
+          item_name: item.item_name,
+        };
+        bookingItems.push(bookingItem);
+        console.log("➕ Adding NEW item:", {
+          service_id: serviceId,
+          item_name: item.item_name,
+        });
+      }
+      // Note: UPDATE operations are not sent explicitly
+      // Backend will handle UPDATE implicitly if service_id exists in both original and selected
+      // We only need to send DELETE and ADD operations
+    });
+
+    console.log("📦 Final booking_items array:", bookingItems);
+    return bookingItems;
+  }, [originalItems, selectedItems]);
+
   // Handle submit
   const handleSubmit = async () => {
     if (!booking || !selectedBranch || !selectedVehicle) {
@@ -486,6 +628,9 @@ export default function UpdateBookingScreen() {
       // toISOString() can cause date shift when converting to UTC
       const dateStr = formatDateString(bookingDate);
       
+      // Build booking_items array for API
+      const bookingItems = buildBookingItemsArray();
+      
       // For slot booking, backend will calculate scheduled_start_at and scheduled_end_at from slot_date and slot_start_time
       // So we should NOT send scheduled_start_at and scheduled_end_at when we have slot_date and slot_start_time
       // to avoid timezone issues and let backend handle the calculation correctly
@@ -502,6 +647,11 @@ export default function UpdateBookingScreen() {
         currency: "VND",
         notes: notes || "",
       };
+
+      // Add booking_items array if it has items
+      if (bookingItems.length > 0) {
+        updateRequest.booking_items = bookingItems;
+      }
 
       // For slot booking, send slot_date and slot_start_time - backend will calculate dates correctly
       if (selectedSlot && isSlotBooking) {
@@ -666,8 +816,15 @@ export default function UpdateBookingScreen() {
                   <Chip
                     key={item.item_id}
                     onClose={() => {
+                      // Prevent event propagation to avoid circular reference
+                      // Filter out the removed item
                       const newItems = selectedItems.filter((i) => i.item_id !== item.item_id);
                       setSelectedItems(newItems);
+                      console.log("🗑️ Service removed from selection:", {
+                        removedItem: item.item_name,
+                        service_id: item.service?.service_id,
+                        remainingItems: newItems.length,
+                      });
                     }}
                     style={{ marginBottom: 4 }}
                   >

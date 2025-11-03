@@ -254,6 +254,16 @@ export interface CreateBookingWithSlotRequest {
   special_requests?: string[];
 }
 
+// Request item for booking_items array in update booking
+export interface CreateBookingItemRequest {
+  service_id?: string; // UUID, optional - ID của service
+  item_name?: string; // String, optional - Tên item
+  item_description?: string; // String, optional - Mô tả item
+  discount_amount?: number; // BigDecimal, optional - Số tiền chiết khấu
+  tax_amount?: number; // BigDecimal, optional - Số tiền thuế
+  operation?: "DELETE"; // String enum, optional - Operation type - chỉ có giá trị "DELETE"
+}
+
 export interface UpdateBookingRequest {
   // Customer information
   customer_name?: string;
@@ -299,6 +309,9 @@ export interface UpdateBookingRequest {
   coupon_code?: string;
   notes?: string;
   special_requests?: string[];
+  
+  // Booking items - Array of items to add/update/delete
+  booking_items?: CreateBookingItemRequest[];
 }
 
 export interface BookingStatisticsDto {
