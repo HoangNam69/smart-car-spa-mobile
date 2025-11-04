@@ -10,6 +10,8 @@ import {
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../src/context/AuthContext";
+import { CartProvider } from "../src/context/CartContext";
+import { theme } from "../src/config/theme";
 
 const paperTheme = {
   ...DefaultTheme,
@@ -49,168 +51,173 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <PaperProvider theme={paperTheme}>
-          <StatusBar style="auto" />
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="auths/login"
-              options={{
-                title: "Smart Car Spa",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="auths/signup"
-              options={{
-                title: "",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="auths/password-management"
-              options={{
-                title: "Đổi mật khẩu",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="auths/forgot-password"
-              options={{
-                title: "Quên mật khẩu",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="personal/personal"
-              options={{
-                title: "Thông tin cá nhân",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="vehicle-management/vehicle-list"
-              options={{
-                title: "Danh sách xe",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="vehicle-management/vehicle-addition"
-              options={{
-                title: "Thêm xe mới",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="vehicle-management/vehicle-detail/[id]"
-              options={{
-                title: "Chi tiết xe",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="history-management/booking-history/booking-history"
-              options={{
-                title: "Lịch sử đặt lịch",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="history-management/booking-history/update-booking/[id]"
-              options={{
-                title: "Cập nhật đặt lịch",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="history-management/booking-history/booking-detail/[id]"
-              options={{
-                title: "Chi tiết đặt lịch",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="history-management/care-history/care-history"
-              options={{
-                title: "Theo dõi hệ thống chăm sóc xe",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-            <Stack.Screen
-              name="history-management/care-history/care-process/[id]"
-              options={{
-                title: "Quá trình chăm sóc",
-                headerTitleAlign: "center",
-                headerTintColor: "#33363F",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                  fontSize: 20,
-                },
-              }}
-            />
-          </Stack>
-        </PaperProvider>
+        <CartProvider>
+          <PaperProvider theme={theme}>
+            <StatusBar style="auto" />
+            <Stack>
+              <Stack.Screen
+                name="(tabs)"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="auths/login"
+                options={{
+                  title: "Smart Car Spa",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="auths/signup"
+                options={{
+                  title: "",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="auths/password-management"
+                options={{
+                  title: "Đổi mật khẩu",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="auths/forgot-password"
+                options={{
+                  title: "Quên mật khẩu",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="personal/personal"
+                options={{
+                  title: "Thông tin cá nhân",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="vehicle-management/vehicle-list"
+                options={{
+                  title: "Danh sách xe",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="vehicle-management/vehicle-addition"
+                options={{
+                  title: "Thêm xe mới",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="vehicle-management/vehicle-detail/[id]"
+                options={{
+                  title: "Chi tiết xe",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="history-management/booking-history/booking-history"
+                options={{
+                  title: "Lịch sử đặt lịch",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="history-management/booking-history/update-booking/[id]"
+                options={{
+                  title: "Cập nhật đặt lịch",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="history-management/booking-history/booking-detail/[id]"
+                options={{
+                  title: "Chi tiết đặt lịch",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="history-management/care-history/care-history"
+                options={{
+                  title: "Theo dõi hệ thống chăm sóc xe",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="history-management/care-history/care-process/[id]"
+                options={{
+                  title: "Quá trình chăm sóc",
+                  headerTitleAlign: "center",
+                  headerTintColor: "#33363F",
+                  headerTitleStyle: {
+                    fontWeight: "bold",
+                    fontSize: 20,
+                  },
+                }}
+              />
+            </Stack>
+          </PaperProvider>
+        </CartProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
