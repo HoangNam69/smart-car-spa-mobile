@@ -78,6 +78,7 @@ export default function BookingScreen() {
     }
     return min;
   };
+  
   const computeMaxDate = () => {
     const now = new Date();
     // End of next month
@@ -96,6 +97,7 @@ export default function BookingScreen() {
   const [vehicleModal, setVehicleModal] = useState(false);
   const [branchModal, setBranchModal] = useState(false);
   const [bayModal, setBayModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const getSlotStatusMeta = (
     status: TimeSlotDto["status"],
@@ -175,6 +177,7 @@ export default function BookingScreen() {
       setBranchId(undefined);
       setBayId(undefined);
       setSelectedSlot(null);
+      setCurrentStep(1);
       return () => {};
     }, [loadInit])
   );
@@ -213,6 +216,26 @@ export default function BookingScreen() {
     loadSlots();
   }, [loadSlots]);
 
+  function validateStep(step: number) {
+    const errs: Record<string, string> = {};
+    if (step === 1) {
+      if (!vehicleId) errs.vehicle = "Vui lòng chọn xe";
+      if (selectedItems.length === 0)
+        errs.services = "Vui lòng chọn ít nhất 1 dịch vụ";
+    } else if (step === 2) {
+      if (!branchId) errs.branch = "Vui lòng chọn chi nhánh";
+    } else if (step === 3) {
+      if (!bayId) errs.bay = "Vui lòng chọn khu vực";
+      if (!selectedSlot) errs.slot = "Vui lòng chọn khung giờ";
+    }
+    return errs;
+  }
+
+  const isStepValid = (step: number): boolean => {
+    const errs = validateStep(step);
+    return Object.keys(errs).length === 0;
+  };
+
   function validate() {
     const errs: Record<string, string> = {};
     if (!vehicleId) errs.vehicle = "Vui lòng chọn xe";
@@ -223,6 +246,27 @@ export default function BookingScreen() {
       errs.services = "Vui lòng chọn ít nhất 1 dịch vụ";
     return errs;
   }
+
+  const handleNextStep = () => {
+    const errs = validateStep(currentStep);
+    if (Object.keys(errs).length > 0) {
+      setSnackbar({
+        visible: true,
+        message: Object.values(errs)[0],
+        error: true,
+      });
+      return;
+    }
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   async function onSubmit() {
     if (!user?.user_id) return;
@@ -357,308 +401,477 @@ export default function BookingScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
-          {/* Xe */}
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-            <List.Item
-              title="Chọn xe"
-              description={
-                vehicles.find((v) => v.vehicle_id === vehicleId)
-                  ?.license_plate || "Chạm để chọn"
-              }
-              left={(p) => <List.Icon {...p} icon="car" />}
-              right={(p) => <List.Icon {...p} icon="chevron-right" />}
-              onPress={() => setVehicleModal(true)}
-              titleStyle={{ fontWeight: "bold" }}
-            />
-          </Card>
-
-          {/* Dịch vụ */}
+          {/* Step Indicator */}
           <Card
             mode="elevated"
-            style={{
-              borderRadius: 16,
-              overflow: "hidden",
-              marginBottom: 16,
-            }}
+            style={{ borderRadius: 12, marginBottom: 16, padding: 16 }}
           >
-            <List.Accordion
-              title="Chọn dịch vụ"
-              left={(p) => <List.Icon {...p} icon="clipboard-list" />}
-              titleStyle={{ fontWeight: "bold" }}
-              descriptionStyle={{ fontWeight: "bold" }}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              <Card.Content>
+              {[1, 2, 3].map((step) => (
                 <View
+                  key={step}
                   style={{
+                    flex: 1,
+                    alignItems: "center",
                     flexDirection: "row",
-                    flexWrap: "wrap",
-                    justifyContent: "space-between",
                   }}
                 >
-                  {services.map((item) => {
-                    const selected = selectedItems.some(
-                      (x) => x.item_id === item.item_id
-                    );
-                    return (
-                      <Card
-                        key={item.item_id}
-                        onPress={() => {
-                          setSelectedItems((prev) =>
-                            selected
-                              ? prev.filter((x) => x.item_id !== item.item_id)
-                              : [...prev, item]
-                          );
-                          setTotalPrice((prev) =>
-                            selected
-                              ? prev - (item.fixed_price || 0)
-                              : prev + (item.fixed_price || 0)
-                          );
-                          setTotalDuration((prev) =>
-                            selected
-                              ? prev - (item.service?.estimated_duration || 0)
-                              : prev + (item.service?.estimated_duration || 0)
-                          );
-                        }}
-                        style={{
-                          width: "48%",
-                          marginBottom: 10,
-                          borderRadius: 12,
-                          borderWidth: 2,
-                          borderColor: selected ? "#22c55e" : "#E5E7EB",
-                          backgroundColor: selected ? "#ECFDF5" : "white",
-                        }}
-                      >
-                        <Card.Content
-                          style={{
-                            minHeight: 136,
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            paddingVertical: 12,
-                          }}
-                        >
-                          <View>
-                            <Text
-                              numberOfLines={2}
-                              style={{ fontWeight: "600", textAlign: "center" }}
-                            >
-                              {item.item_name}
-                            </Text>
-                            <Text
-                              style={{
-                                color: "#6b7280",
-                                marginTop: 6,
-                                textAlign: "center",
-                              }}
-                            >
-                              {item.service?.estimated_duration || 0} phút •{" "}
-                              {(item.fixed_price || 0).toLocaleString()} VND
-                            </Text>
-                          </View>
-                          <Text
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor:
+                        currentStep >= step
+                          ? theme.colors.primary
+                          : "#E5E7EB",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          currentStep >= step ? "white" : "#9CA3AF",
+                        fontWeight: "bold",
+                        fontSize: 16,
+                      }}
+                    >
+                      {step}
+                    </Text>
+                  </View>
+                  {step < 3 && (
+                    <View
+                      style={{
+                        flex: 1,
+                        height: 2,
+                        backgroundColor:
+                          currentStep > step ? theme.colors.primary : "#E5E7EB",
+                        marginHorizontal: 8,
+                      }}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 12,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: currentStep === 1 ? theme.colors.primary : "#9CA3AF",
+                  fontWeight: currentStep === 1 ? "bold" : "normal",
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                Xe & Dịch vụ
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: currentStep === 2 ? theme.colors.primary : "#9CA3AF",
+                  fontWeight: currentStep === 2 ? "bold" : "normal",
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                Thời gian & Chi nhánh
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: currentStep === 3 ? theme.colors.primary : "#9CA3AF",
+                  fontWeight: currentStep === 3 ? "bold" : "normal",
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                Khu vực & Giờ
+              </Text>
+            </View>
+          </Card>
+
+          {/* Step 1: Chọn xe và dịch vụ */}
+          {currentStep === 1 && (
+            <>
+              {/* Xe */}
+              <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+                <List.Item
+                  title="Chọn xe"
+                  description={
+                    vehicles.find((v) => v.vehicle_id === vehicleId)
+                      ?.license_plate || "Chạm để chọn"
+                  }
+                  left={(p) => <List.Icon {...p} icon="car" />}
+                  right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                  onPress={() => setVehicleModal(true)}
+                  titleStyle={{ fontWeight: "bold" }}
+                />
+              </Card>
+
+              {/* Dịch vụ */}
+              <Card
+                mode="elevated"
+                style={{
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  marginBottom: 16,
+                }}
+              >
+                <List.Accordion
+                  title="Chọn dịch vụ"
+                  left={(p) => <List.Icon {...p} icon="clipboard-list" />}
+                  titleStyle={{ fontWeight: "bold" }}
+                  descriptionStyle={{ fontWeight: "bold" }}
+                >
+                  <Card.Content>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      {services.map((item) => {
+                        const selected = selectedItems.some(
+                          (x) => x.item_id === item.item_id
+                        );
+                        return (
+                          <Card
+                            key={item.item_id}
+                            onPress={() => {
+                              setSelectedItems((prev) =>
+                                selected
+                                  ? prev.filter((x) => x.item_id !== item.item_id)
+                                  : [...prev, item]
+                              );
+                              setTotalPrice((prev) =>
+                                selected
+                                  ? prev - (item.fixed_price || 0)
+                                  : prev + (item.fixed_price || 0)
+                              );
+                              setTotalDuration((prev) =>
+                                selected
+                                  ? prev - (item.service?.estimated_duration || 0)
+                                  : prev + (item.service?.estimated_duration || 0)
+                              );
+                            }}
                             style={{
-                              color: selected ? "#16a34a" : "#64748b",
-                              fontSize: 12,
-                              textAlign: "center",
+                              width: "48%",
+                              marginBottom: 10,
+                              borderRadius: 12,
+                              borderWidth: 2,
+                              borderColor: selected ? "#22c55e" : "#E5E7EB",
+                              backgroundColor: selected ? "#ECFDF5" : "white",
                             }}
                           >
-                            {selected ? "Đã chọn" : "Chạm để chọn"}
-                          </Text>
-                        </Card.Content>
-                      </Card>
-                    );
-                  })}
-                </View>
-                <Divider style={{ marginVertical: 8 }} />
-                <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
-                  <Text>Tổng tiền: {totalPrice.toLocaleString()} VND</Text>
-                  <Text>Thời gian dự kiến: {totalDuration} phút</Text>
-                </View>
-              </Card.Content>
-            </List.Accordion>
-          </Card>
-
-          {/* Thời gian & Chi nhánh */}
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-            <Card.Title
-              title="Thời gian & Chi nhánh"
-              titleStyle={{ fontWeight: "bold" }}
-            />
-            <Divider />
-            <Card.Content>
-              <List.Item
-                title="Ngày đặt"
-                description={bookingDate.toLocaleDateString()}
-                left={(p) => <List.Icon {...p} icon="calendar" />}
-                right={(p) => <List.Icon {...p} icon="chevron-right" />}
-                onPress={() => setShowDate(true)}
-              />
-              {showDate && (
-                <DateTimePicker
-                  value={bookingDate}
-                  mode="date"
-                  minimumDate={computeMinDate()}
-                  maximumDate={computeMaxDate()}
-                  onChange={(e, d) => {
-                    setShowDate(false);
-                    if (d) setBookingDate(d);
-                  }}
-                />
-              )}
-              <List.Item
-                title="Chi nhánh"
-                description={
-                  branches.find((b) => b.branch_id === branchId)?.branch_name ||
-                  "Chạm để chọn"
-                }
-                left={(p) => <List.Icon {...p} icon="home-map-marker" />}
-                right={(p) => <List.Icon {...p} icon="chevron-right" />}
-                onPress={() => setBranchModal(true)}
-              />
-            </Card.Content>
-          </Card>
-
-          {/* Khu vực & khung giờ */}
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-            <Card.Title
-              title="Khu vực & khung giờ"
-              titleStyle={{ fontWeight: "bold" }}
-            />
-            <Divider />
-            <Card.Content>
-              <List.Item
-                title="Khu vực chăm sóc"
-                description={
-                  bays.find((b) => b.bay_id === bayId)?.bay_name ||
-                  "Chạm để chọn"
-                }
-                left={(p) => <List.Icon {...p} icon="garage" />}
-                right={(p) => <List.Icon {...p} icon="chevron-right" />}
-                onPress={() => setBayModal(true)}
-              />
-              <Divider style={{ marginVertical: 8 }} />
-              {loadingSlots ? (
-                <View style={{ paddingVertical: 20 }}>
-                  <ActivityIndicator />
-                </View>
-              ) : slots.length === 0 ? (
-                <HelperText type="info" visible>
-                  Không có khung giờ khả dụng cho ngày này
-                </HelperText>
-              ) : (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  {slots.map((slot) => {
-                    const isSelected =
-                      selectedSlot?.startTime === slot.startTime &&
-                      selectedSlot?.bayId === slot.bayId;
-                    const selectable = canSelectSlot(slot);
-                    const isDisabled = !selectable;
-                    const meta = getSlotStatusMeta(
-                      slot.status,
-                      slot.isAvailable
-                    );
-                    return (
-                      <Card
-                        key={`${slot.bayId}-${slot.startTime}`}
-                        onPress={() => !isDisabled && setSelectedSlot(slot)}
-                        style={{
-                          width: "48%",
-                          marginBottom: 12,
-                          borderRadius: 10,
-                          borderWidth: 2,
-                          borderColor: isSelected
-                            ? theme.colors.primary
-                            : isDisabled
-                            ? "#E5E7EB"
-                            : "#D1D5DB",
-                          backgroundColor: isSelected
-                            ? theme.colors.primaryContainer
-                            : isDisabled
-                            ? "#F3F4F6"
-                            : "white",
-                          opacity: isDisabled ? 0.6 : 1,
-                        }}
-                        disabled={isDisabled}
-                      >
-                        <Card.Content style={{ padding: 12 }}>
-                          <View style={{ alignItems: "flex-end" }}>
-                            <Chip
-                              compact
-                              style={{ backgroundColor: meta.bg }}
-                              textStyle={{ color: meta.fg }}
-                            >
-                              {meta.label}
-                            </Chip>
-                          </View>
-                          <View style={{ alignItems: "center", marginTop: 6 }}>
-                            <Text
+                            <Card.Content
                               style={{
-                                fontSize: 14,
-                                fontWeight: "600",
-                                color: isSelected
-                                  ? theme.colors.primary
-                                  : isDisabled
-                                  ? "#9CA3AF"
-                                  : "#1F2937",
-                                textAlign: "center",
+                                minHeight: 136,
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                paddingVertical: 12,
                               }}
                             >
-                              {slot.startTime} - {slot.endTime}
-                            </Text>
-                            {slot.durationMinutes && (
+                              <View>
+                                <Text
+                                  numberOfLines={2}
+                                  style={{ fontWeight: "600", textAlign: "center" }}
+                                >
+                                  {item.item_name}
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: "#6b7280",
+                                    marginTop: 6,
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {item.service?.estimated_duration || 0} phút •{" "}
+                                  {(item.fixed_price || 0).toLocaleString()} VND
+                                </Text>
+                              </View>
                               <Text
                                 style={{
-                                  fontSize: 11,
-                                  color: isSelected
-                                    ? theme.colors.primary
-                                    : "#6B7280",
-                                  marginTop: 4,
+                                  color: selected ? "#16a34a" : "#64748b",
+                                  fontSize: 12,
+                                  textAlign: "center",
                                 }}
                               >
-                                {slot.durationMinutes} phút
+                                {selected ? "Đã chọn" : "Chạm để chọn"}
                               </Text>
-                            )}
-                            {!selectable && (
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: "#dc2626",
-                                  marginTop: 4,
-                                }}
-                              >
-                                {totalDuration > 60
-                                  ? "Không đủ slot liên tiếp"
-                                  : "Không phù hợp thời lượng"}
-                              </Text>
-                            )}
-                          </View>
-                        </Card.Content>
-                      </Card>
-                    );
-                  })}
-                </View>
-              )}
-              {!selectedSlot ? (
-                <HelperText type="info" visible>
-                  Vui lòng chọn khung giờ khả dụng
-                </HelperText>
-              ) : null}
-            </Card.Content>
-          </Card>
+                            </Card.Content>
+                          </Card>
+                        );
+                      })}
+                    </View>
+                    <Divider style={{ marginVertical: 8 }} />
+                    <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
+                      <Text>Tổng tiền: {totalPrice.toLocaleString()} VND</Text>
+                      <Text>Thời gian dự kiến: {totalDuration} phút</Text>
+                    </View>
+                  </Card.Content>
+                </List.Accordion>
+              </Card>
 
-          <Button
-            mode="contained"
-            onPress={onSubmit}
-            loading={submitting}
-            disabled={submitting}
-          >
-            Đặt lịch
-          </Button>
+              <Button
+                mode="contained"
+                onPress={handleNextStep}
+                style={{ marginTop: 8 }}
+                disabled={!isStepValid(1)}
+              >
+                Tiếp theo
+              </Button>
+              {!isStepValid(1) && (
+                <HelperText type="info" visible style={{ marginTop: 8 }}>
+                  {!vehicleId && "Vui lòng chọn xe. "}
+                  {selectedItems.length === 0 && "Vui lòng chọn ít nhất 1 dịch vụ."}
+                </HelperText>
+              )}
+            </>
+          )}
+
+          {/* Step 2: Thời gian & Chi nhánh */}
+          {currentStep === 2 && (
+            <>
+              <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+                <Card.Title
+                  title="Thời gian & Chi nhánh"
+                  titleStyle={{ fontWeight: "bold" }}
+                />
+                <Divider />
+                <Card.Content>
+                  <List.Item
+                    title="Ngày đặt"
+                    description={bookingDate.toLocaleDateString()}
+                    left={(p) => <List.Icon {...p} icon="calendar" />}
+                    right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                    onPress={() => setShowDate(true)}
+                  />
+                  {showDate && (
+                    <DateTimePicker
+                      value={bookingDate}
+                      mode="date"
+                      minimumDate={computeMinDate()}
+                      maximumDate={computeMaxDate()}
+                      onChange={(e, d) => {
+                        setShowDate(false);
+                        if (d) setBookingDate(d);
+                      }}
+                    />
+                  )}
+                  <List.Item
+                    title="Chi nhánh"
+                    description={
+                      branches.find((b) => b.branch_id === branchId)?.branch_name ||
+                      "Chạm để chọn"
+                    }
+                    left={(p) => <List.Icon {...p} icon="home-map-marker" />}
+                    right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                    onPress={() => setBranchModal(true)}
+                  />
+                </Card.Content>
+              </Card>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <Button
+                  mode="outlined"
+                  onPress={handlePrevStep}
+                  style={{ flex: 1 }}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleNextStep}
+                  style={{ flex: 1 }}
+                  disabled={!isStepValid(2)}
+                >
+                  Tiếp theo
+                </Button>
+              </View>
+              {!isStepValid(2) && (
+                <HelperText type="info" visible style={{ marginTop: 8 }}>
+                  {!branchId && "Vui lòng chọn chi nhánh."}
+                </HelperText>
+              )}
+            </>
+          )}
+
+          {/* Step 3: Khu vực & khung giờ */}
+          {currentStep === 3 && (
+            <>
+              <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+                <Card.Title
+                  title="Khu vực & khung giờ"
+                  titleStyle={{ fontWeight: "bold" }}
+                />
+                <Divider />
+                <Card.Content>
+                  <List.Item
+                    title="Khu vực chăm sóc"
+                    description={
+                      bays.find((b) => b.bay_id === bayId)?.bay_name ||
+                      "Chạm để chọn"
+                    }
+                    left={(p) => <List.Icon {...p} icon="garage" />}
+                    right={(p) => <List.Icon {...p} icon="chevron-right" />}
+                    onPress={() => setBayModal(true)}
+                  />
+                  <Divider style={{ marginVertical: 8 }} />
+                  {loadingSlots ? (
+                    <View style={{ paddingVertical: 20 }}>
+                      <ActivityIndicator />
+                    </View>
+                  ) : slots.length === 0 ? (
+                    <HelperText type="info" visible>
+                      Không có khung giờ khả dụng cho ngày này
+                    </HelperText>
+                  ) : (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      {slots.map((slot, index) => {
+                        const isSelected =
+                          selectedSlot?.startTime === slot.startTime &&
+                          selectedSlot?.bayId === slot.bayId;
+                        const selectable = canSelectSlot(slot);
+                        const isDisabled = !selectable;
+                        const meta = getSlotStatusMeta(
+                          slot.status,
+                          slot.isAvailable
+                        );
+                        return (
+                          <Card
+                            key={`slot-${index}-${slot.bayId}-${slot.startTime}-${slot.endTime}`}
+                            onPress={() => !isDisabled && setSelectedSlot(slot)}
+                            style={{
+                              width: "48%",
+                              marginBottom: 12,
+                              borderRadius: 10,
+                              borderWidth: 2,
+                              borderColor: isSelected
+                                ? theme.colors.primary
+                                : isDisabled
+                                ? "#E5E7EB"
+                                : "#D1D5DB",
+                              backgroundColor: isSelected
+                                ? theme.colors.primaryContainer
+                                : isDisabled
+                                ? "#F3F4F6"
+                                : "white",
+                              opacity: isDisabled ? 0.6 : 1,
+                            }}
+                            disabled={isDisabled}
+                          >
+                            <Card.Content style={{ padding: 12 }}>
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Chip
+                                  compact
+                                  style={{ backgroundColor: meta.bg }}
+                                  textStyle={{ color: meta.fg }}
+                                >
+                                  {meta.label}
+                                </Chip>
+                              </View>
+                              <View style={{ alignItems: "center", marginTop: 6 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 14,
+                                    fontWeight: "600",
+                                    color: isSelected
+                                      ? theme.colors.primary
+                                      : isDisabled
+                                      ? "#9CA3AF"
+                                      : "#1F2937",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {slot.startTime} - {slot.endTime}
+                                </Text>
+                                {slot.durationMinutes && (
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: isSelected
+                                        ? theme.colors.primary
+                                        : "#6B7280",
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    {slot.durationMinutes} phút
+                                  </Text>
+                                )}
+                                {!selectable && (
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#dc2626",
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    {totalDuration > 60
+                                      ? "Không đủ slot liên tiếp"
+                                      : "Không phù hợp thời lượng"}
+                                  </Text>
+                                )}
+                              </View>
+                            </Card.Content>
+                          </Card>
+                        );
+                      })}
+                    </View>
+                  )}
+                  {!selectedSlot ? (
+                    <HelperText type="info" visible>
+                      Vui lòng chọn khung giờ khả dụng
+                    </HelperText>
+                  ) : null}
+                </Card.Content>
+              </Card>
+
+              <View style={{ flexDirection: "row", gap: 12, marginBottom: 8 }}>
+                <Button
+                  mode="outlined"
+                  onPress={handlePrevStep}
+                  style={{ flex: 1 }}
+                >
+                  Quay lại
+                </Button>
+              </View>
+
+              <Button
+                mode="contained"
+                onPress={onSubmit}
+                loading={submitting}
+                disabled={submitting || !isStepValid(3)}
+              >
+                Đặt lịch
+              </Button>
+              {!isStepValid(3) && (
+                <HelperText type="info" visible style={{ marginTop: 8 }}>
+                  {!bayId && "Vui lòng chọn khu vực. "}
+                  {!selectedSlot && "Vui lòng chọn khung giờ."}
+                </HelperText>
+              )}
+            </>
+          )}
         </ScrollView>
       )}
 
