@@ -4,16 +4,16 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
+import { router } from "expo-router";
 import { tokenStorage } from "../storage/tokenStorage";
 import { API_CONFIG } from "./api.constant";
-import { router } from "expo-router";
 
 // Token refresh state management - match webapp pattern
 let isRefreshing = false;
-let failedQueue: Array<{
+let failedQueue: {
   resolve: (value?: unknown) => void;
   reject: (error?: unknown) => void;
-}> = [];
+}[] = [];
 
 // Tạo axios instance
 const axiosInstance: AxiosInstance = axios.create({
@@ -55,7 +55,7 @@ const refreshTokenRequest = async (): Promise<string | null> => {
         refreshToken: refreshTokenValue,
       },
       {
-        timeout: 10000,
+        timeout: API_CONFIG.TIMEOUT,
         headers: {
           "Content-Type": "application/json",
         },
@@ -70,6 +70,12 @@ const refreshTokenRequest = async (): Promise<string | null> => {
 
     if (response.data.success && response.data.data) {
       const { access_token, refresh_token, user_info } = response.data.data;
+
+      // Validate tokens before storing
+      if (!access_token || !refresh_token) {
+        console.log("Invalid token response: missing access_token or refresh_token");
+        throw new Error("Server không trả về đầy đủ thông tin token");
+      }
 
       // Update tokens in storage
       await tokenStorage.setTokens(access_token, refresh_token);
@@ -93,16 +99,22 @@ const refreshTokenRequest = async (): Promise<string | null> => {
       url: error.config?.url,
     });
 
-    // Check if it's a 401 error (refresh token expired/invalid)
-    if (error.response?.status === 401) {
-      console.log("Refresh token is invalid or expired, clearing all tokens");
-      await tokenStorage.clearTokens();
+    const status = error.response?.status;
 
-      // Redirect to login on mobile
+    // Handle 401 or 500 errors - clear tokens and redirect
+    // Note: Queue processing and isRefreshing reset are handled in response interceptor
+    if (status === 401 || status === 500) {
+      if (status === 401) {
+        console.log("Refresh token is invalid or expired, clearing all tokens");
+      } else {
+        console.log("Refresh token endpoint returned 500, clearing tokens");
+      }
+
+      await tokenStorage.clearTokens();
       router.replace("/auths/login");
     } else {
       console.log(
-        "Non-401 error during token refresh, keeping tokens for retry"
+        "Non-401/500 error during token refresh, keeping tokens for retry"
       );
     }
 
@@ -132,9 +144,14 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & {
       _retry?: boolean;
-    };
+    }) | undefined;
+
+    // If no original request config, reject immediately
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
 
     // Log error details for debugging
     console.log("API Error Details:", {
@@ -168,7 +185,7 @@ axiosInstance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            if (originalRequest.headers && token) {
+            if (originalRequest && originalRequest.headers && token) {
               originalRequest.headers.Authorization = `Bearer ${token}`;
             }
             return axiosInstance(originalRequest);
@@ -200,6 +217,8 @@ axiosInstance.interceptors.response.use(
     }
 
     // Handle 500 - Internal Server Error - match webapp pattern
+    // Note: Refresh token requests use axios.post directly, so they won't reach here
+    // They are handled in refreshTokenRequest() catch block
     if (error.response?.status === 500) {
       console.log("Server Error (500):", {
         url: originalRequest?.url,
@@ -207,13 +226,6 @@ axiosInstance.interceptors.response.use(
         message:
           (error.response?.data as any)?.message || "Internal server error",
       });
-
-      // If this is a refresh token request that failed, clear tokens and redirect
-      if (originalRequest?.url?.includes("/auth/refresh-token")) {
-        console.log("Refresh token endpoint returned 500, clearing tokens");
-        await tokenStorage.clearTokens();
-        router.replace("/auths/login");
-      }
     }
 
     return Promise.reject(error);
