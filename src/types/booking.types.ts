@@ -4,10 +4,16 @@
  * Updated to match backend BookingInfoDto
  */
 
+export enum BookingType {
+  SCHEDULED = "SCHEDULED",
+  WALK_IN = "WALK_IN"
+}
+
 export interface BookingInfoDto {
   // Core booking info
   booking_id: string;
   booking_code: string;
+  booking_type?: BookingType; // SCHEDULED or WALK_IN
   
   // Customer information
   customer_id?: string;
@@ -226,8 +232,8 @@ export interface CreateBookingWithSlotRequest {
   // Branch and slot information
   branch_id: string;
   
-  // Selected slot information
-  selected_slot: {
+  // Selected schedule information
+  selected_schedule: {
     bay_id: string;
     date: string; // YYYY-MM-DD format
     start_time: string; // HH:mm format
@@ -237,10 +243,8 @@ export interface CreateBookingWithSlotRequest {
   // Booking items
   booking_items: {
     service_id: string;
-    item_name?: string;
-    item_description?: string;
-    discount_amount?: number;
-    tax_amount?: number;
+    service_name?: string;
+    service_description?: string;
   }[];
   
   // Pricing information

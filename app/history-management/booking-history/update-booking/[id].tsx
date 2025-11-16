@@ -19,7 +19,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../../src/context/AuthContext";
 import { bookingService } from "../../../../src/services/booking.service";
-import { bookingScheduleService, TimeSlotDto } from "../../../../src/services/bookingSchedule.service";
+import { 
+  bookingScheduleService, 
+  TimeSlotDto,
+  SlotInfo,
+  AvailableTimeRangesResponse,
+} from "../../../../src/services/bookingSchedule.service";
 import { BranchDisplay, branchService } from "../../../../src/services/branch.service";
 import { PriceBookItem, pricingService } from "../../../../src/services/pricing.service";
 import { ServiceBay, serviceBayService } from "../../../../src/services/serviceBay.service";
@@ -27,10 +32,8 @@ import { VehicleProfileDto, vehicleProfileService } from "../../../../src/servic
 import { BookingInfoDto, CreateBookingItemRequest } from "../../../../src/types/booking.types";
 
 interface SelectedSlot {
-  bayId: string;
-  bayName: string;
-  date: string;
-  startTime: string;
+  time: string; // HH:mm format
+  endTime: string; // HH:mm format (calculated)
   serviceDurationMinutes: number;
 }
 
@@ -61,9 +64,15 @@ export default function UpdateBookingScreen() {
   // Data states
   const [bookingDate, setBookingDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState<TimeSlotDto[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
+  const [timeRangesData, setTimeRangesData] = useState<AvailableTimeRangesResponse | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [notes, setNotes] = useState("");
+  const [snackbar, setSnackbar] = useState<{
+    visible: boolean;
+    message: string;
+    error?: boolean;
+  }>({ visible: false, message: "", error: false });
 
   // Dropdown data
   const [userVehicles, setUserVehicles] = useState<VehicleProfileDto[]>([]);
@@ -75,13 +84,6 @@ export default function UpdateBookingScreen() {
   const [vehicleModal, setVehicleModal] = useState(false);
   const [branchModal, setBranchModal] = useState(false);
   const [serviceModal, setServiceModal] = useState(false);
-
-  // UI states
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; error?: boolean }>({
-    visible: false,
-    message: "",
-    error: false,
-  });
 
   // Refs
   const isInitialized = useRef(false);
@@ -268,11 +270,15 @@ export default function UpdateBookingScreen() {
               const slotDate = parseAndNormalizeDate(bookingData.scheduled_start_at);
               if (slotDate) {
                 const serviceDuration = bookingData.estimated_duration_minutes || 60;
+                const startTime = bookingData.slot_start_time || "";
+                // Calculate end time
+                const startMinutes = bookingScheduleService.parseTime(startTime);
+                const endMinutes = startMinutes + serviceDuration;
+                const endTime = bookingScheduleService.formatTime(endMinutes);
+                
                 const slot: SelectedSlot = {
-                  bayId: bookingData.bay_id,
-                  bayName: bookingData.bay_name || bay.bay_name,
-                  date: formatDateString(slotDate),
-                  startTime: bookingData.slot_start_time || "",
+                  time: startTime,
+                  endTime: endTime,
                   serviceDurationMinutes: serviceDuration,
                 };
                 setSelectedSlot(slot);
@@ -347,10 +353,7 @@ export default function UpdateBookingScreen() {
                       bays.find((b) => b.bay_id === booking.bay_id);
           if (bay) {
             setSelectedBay(bay);
-            // If this is the original bay, restore the original slot
-            if (originalSlot && originalSlot.bayId === bay.bay_id) {
-              setSelectedSlot(originalSlot);
-            }
+            // Original slot will be restored in the useEffect that watches availableSlots
           }
         }
       });
@@ -362,28 +365,68 @@ export default function UpdateBookingScreen() {
     async (duration: number) => {
       if (!selectedBranch || !selectedBay || !bookingDate || duration <= 0) {
         setAvailableSlots([]);
+        setTimeRangesData(null);
         return;
       }
 
       setLoadingSlots(true);
       try {
         const dateStr = formatDateString(bookingDate);
-        const slots = await bookingScheduleService.getAvailableSlots({
-          branchId: selectedBranch.branch_id,
+        
+        // Get available time ranges from backend
+        const timeRangesResp = await bookingScheduleService.getAvailableTimeRanges({
+          bay_id: selectedBay.bay_id,
           date: dateStr,
-          serviceDurationMinutes: duration,
-          bayId: selectedBay.bay_id,
+          duration_minutes: Math.max(duration, 30),
         });
-
-        const uniqueSlots = slots.filter(
-          (slot, index, self) =>
-            index === self.findIndex((s) => s.startTime === slot.startTime && s.endTime === slot.endTime)
+        
+        setTimeRangesData(timeRangesResp);
+        
+        // Convert time ranges to slots for UI display
+        const convertedSlots = bookingScheduleService.convertTimeRangesToSlots(
+          timeRangesResp.available_time_ranges,
+          timeRangesResp.working_hours,
+          Math.max(duration, 30),
+          30 // 30-minute intervals
         );
-
-        setAvailableSlots(uniqueSlots);
-      } catch (error) {
-        console.log("Error loading slots:", error);
+        
+        setAvailableSlots(convertedSlots);
+      } catch (error: any) {
+        console.error("Error loading slots:", error);
+        console.error("Error response:", error?.response?.data);
         setAvailableSlots([]);
+        setTimeRangesData(null);
+        
+        // Extract error message from backend response
+        const errorMessage = 
+          error?.response?.data?.message || 
+          error?.response?.data?.error || 
+          error?.message || 
+          "Không thể tải khung giờ";
+        
+        // Check if it's a branch closed error
+        const errorMessageUpper = errorMessage.toUpperCase();
+        if (
+          errorMessageUpper.includes("CLOSED") || 
+          errorMessageUpper.includes("ĐÓNG CỬA") || 
+          errorMessageUpper.includes("BRANCH_CLOSED") ||
+          errorMessageUpper.includes("IS CLOSED")
+        ) {
+          const dayNames = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+          const selectedDay = dayNames[bookingDate.getDay()];
+          setSnackbar({
+            visible: true,
+            message: `Chi nhánh đóng cửa vào ${selectedDay}. Vui lòng chọn ngày khác.`,
+            error: true,
+          });
+        } else {
+          // Other errors
+          setSnackbar({
+            visible: true,
+            message: errorMessage,
+            error: true,
+          });
+        }
       } finally {
         setLoadingSlots(false);
       }
@@ -406,27 +449,29 @@ export default function UpdateBookingScreen() {
   // Validate selected slot after available slots are loaded
   // Also restore original slot if we're back on the original bay and date
   useEffect(() => {
-    if (selectedBay && availableSlots.length > 0) {
-      // Check if we should restore the original slot
-      const isOriginalBay = originalSlot && originalSlot.bayId === selectedBay.bay_id;
+    if (selectedBay && availableSlots.length > 0 && originalSlot) {
       const currentDateStr = formatDateString(bookingDate);
-      const isOriginalDate = originalSlot && originalSlot.date === currentDateStr;
+      
+      // Check if we should restore the original slot
+      // We restore if:
+      // 1. We're on the original bay (check by comparing with booking.bay_id)
+      // 2. We're on the original date (check by comparing slot time with booking.slot_start_time)
+      // 3. No slot is currently selected
+      const isOriginalBay = booking?.bay_id === selectedBay.bay_id;
+      const isOriginalDate = booking?.slot_start_time === originalSlot.time;
       
       if (isOriginalBay && isOriginalDate && !selectedSlot) {
         // Restore original slot if on original bay and date
         setSelectedSlot(originalSlot);
         setIsSlotChanged(false);
-      } else if (selectedSlot && selectedSlot.bayId === selectedBay.bay_id) {
+      } else if (selectedSlot) {
         // Verify the selected slot is still available in the new slot list
         const slotStillValid = availableSlots.some(
-          (slot) => slot.startTime === selectedSlot.startTime
+          (slot) => slot.time === selectedSlot.time && slot.isAvailable
         );
         
         // Check if this is the original slot
-        const isOriginalSlot = originalSlot && 
-          originalSlot.startTime === selectedSlot.startTime && 
-          originalSlot.bayId === selectedSlot.bayId &&
-          originalSlot.date === currentDateStr;
+        const isOriginalSlot = originalSlot.time === selectedSlot.time;
         
         // If slot is no longer valid and it's not the original slot, reset it
         if (!slotStillValid && !isOriginalSlot) {
@@ -438,7 +483,7 @@ export default function UpdateBookingScreen() {
         }
       }
     }
-  }, [availableSlots, selectedSlot, selectedBay, originalSlot, bookingDate]);
+  }, [availableSlots, selectedSlot, selectedBay, originalSlot, bookingDate, booking]);
 
   // Check if duration exceeds original slot duration
   const isDurationExceedsOriginal = useMemo(() => {
@@ -453,51 +498,37 @@ export default function UpdateBookingScreen() {
 
   // Check if slot is suitable
   const isSlotSuitable = useCallback(
-    (slot: TimeSlotDto) => {
-      if (totalDuration <= 60) {
-        return slot.isAvailable && slot.status === "AVAILABLE" && slot.durationMinutes >= totalDuration;
-      }
-
-      const requiredSlots = Math.ceil(totalDuration / 60);
-      const baySlots = availableSlots
-        .filter((s) => s.bayId === slot.bayId)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-      const currentSlotIndex = baySlots.findIndex(
-        (s) => s.startTime === slot.startTime && s.bayId === slot.bayId
-      );
-
-      if (currentSlotIndex === -1) return false;
-
-      for (let i = 0; i < requiredSlots; i++) {
-        const checkSlotIndex = currentSlotIndex + i;
-        if (checkSlotIndex >= baySlots.length) return false;
-
-        const checkSlot = baySlots[checkSlotIndex];
-        if (i > 0) {
-          const previousSlot = baySlots[checkSlotIndex - 1];
-          if (previousSlot.endTime !== checkSlot.startTime) return false;
-        }
-
-        if (!checkSlot.isAvailable || checkSlot.status !== "AVAILABLE") return false;
-      }
-
-      return true;
+    (slot: SlotInfo) => {
+      if (!slot.isAvailable) return false;
+      
+      // Calculate end time for this slot
+      const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
+      const slotEndMinutes = slotStartMinutes + totalDuration;
+      
+      // Check if slot fits within any available time range
+      if (!timeRangesData) return false;
+      
+      return timeRangesData.available_time_ranges.some((range) => {
+        const rangeStart = bookingScheduleService.parseTime(range.start_time);
+        const rangeEnd = bookingScheduleService.parseTime(range.end_time);
+        // Slot is suitable if it starts within range and ends before range ends
+        return slotStartMinutes >= rangeStart && slotEndMinutes <= rangeEnd;
+      });
     },
-    [totalDuration, availableSlots]
+    [timeRangesData, totalDuration]
   );
 
   const canSelectSlot = useCallback(
-    (slot: TimeSlotDto) => {
+    (slot: SlotInfo) => {
       if (isDurationExceedsOriginal) return false;
-      return slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot);
+      return slot.isAvailable && isSlotSuitable(slot);
     },
     [isSlotSuitable, isDurationExceedsOriginal]
   );
 
   // Handle slot selection
   const handleSlotSelect = useCallback(
-    (slot: TimeSlotDto) => {
+    (slot: SlotInfo) => {
       if (isDurationExceedsOriginal) {
         setSnackbar({
           visible: true,
@@ -508,19 +539,21 @@ export default function UpdateBookingScreen() {
       }
 
       if (canSelectSlot(slot)) {
-        const dateStr = formatDateString(bookingDate);
+        // Calculate end time
+        const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
+        const slotEndMinutes = slotStartMinutes + Math.max(totalDuration, 30);
+        const endTime = bookingScheduleService.formatTime(slotEndMinutes);
+        
         const newSlot: SelectedSlot = {
-          bayId: slot.bayId,
-          bayName: slot.bayName,
-          date: dateStr,
-          startTime: slot.startTime,
-          serviceDurationMinutes: totalDuration,
+          time: slot.time,
+          endTime: endTime,
+          serviceDurationMinutes: Math.max(totalDuration, 30),
         };
         setSelectedSlot(newSlot);
         setIsSlotChanged(true);
       }
     },
-    [canSelectSlot, bookingDate, totalDuration, isDurationExceedsOriginal]
+    [canSelectSlot, totalDuration, isDurationExceedsOriginal]
   );
 
   // Helper function to build booking_items array for API
@@ -640,7 +673,7 @@ export default function UpdateBookingScreen() {
         vehicle_model_name: selectedVehicle.model_name || "",
         vehicle_type_name: selectedVehicle.type_name || "",
         branch_id: selectedBranch.branch_id,
-        service_bay_id: selectedSlot ? selectedSlot.bayId : undefined,
+        service_bay_id: selectedSlot && selectedBay ? selectedBay.bay_id : undefined,
         estimated_duration_minutes: totalDuration,
         buffer_minutes: 15,
         total_price: totalPrice,
@@ -656,9 +689,27 @@ export default function UpdateBookingScreen() {
       // For slot booking, send slot_date and slot_start_time - backend will calculate dates correctly
       if (selectedSlot && isSlotBooking) {
         updateRequest.slot_date = dateStr;
-        updateRequest.slot_start_time = selectedSlot.startTime;
-        // Don't send scheduled_start_at/scheduled_end_at when we have slot info
-        // Backend will calculate these from slot_date + slot_start_time + duration
+        updateRequest.slot_start_time = selectedSlot.time;
+        
+        // Use local time format (YYYY-MM-DDTHH:mm:ss) instead of ISO to avoid timezone issues
+        const [startHour, startMinute] = selectedSlot.time.split(":").map(Number);
+        const startLocal = new Date(
+          bookingDate.getFullYear(),
+          bookingDate.getMonth(),
+          bookingDate.getDate(),
+          startHour || 0,
+          startMinute || 0,
+          0,
+          0
+        );
+        const durationMs = selectedSlot.serviceDurationMinutes * 60 * 1000;
+        const endLocal = new Date(startLocal.getTime() + durationMs);
+        const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+        const slotStartLocal = `${startLocal.getFullYear()}-${pad(startLocal.getMonth() + 1)}-${pad(startLocal.getDate())}T${pad(startLocal.getHours())}:${pad(startLocal.getMinutes())}:${pad(startLocal.getSeconds())}`;
+        const slotEndLocal = `${endLocal.getFullYear()}-${pad(endLocal.getMonth() + 1)}-${pad(endLocal.getDate())}T${pad(endLocal.getHours())}:${pad(endLocal.getMinutes())}:${pad(endLocal.getSeconds())}`;
+        
+        updateRequest.scheduled_start_at = slotStartLocal;
+        updateRequest.scheduled_end_at = slotEndLocal;
       } else {
         // For non-slot booking, send scheduled times directly
         updateRequest.scheduled_start_at = bookingDate.toISOString();
@@ -997,41 +1048,28 @@ export default function UpdateBookingScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       {availableSlots.map((slot, index) => {
-                        const canSelect = canSelectSlot(slot);
-                        const isSelected =
-                          selectedSlot &&
-                          selectedSlot.bayId === slot.bayId &&
-                          selectedSlot.startTime === slot.startTime;
+                        // Calculate end time for display
+                        const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
+                        const slotEndMinutes = slotStartMinutes + Math.max(totalDuration, 30);
+                        const endTimeStr = bookingScheduleService.formatTime(slotEndMinutes);
                         
-                        // Get status color and label
-                        const getSlotStatusInfo = (status: string) => {
-                          switch (status) {
-                            case "AVAILABLE":
-                              return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Trống", textColor: "#52c41a" };
-                            case "BOOKED":
-                              return { color: "#1890ff", bgColor: "#E6F7FF", borderColor: "#1890ff", label: "Đã đặt", textColor: "#1890ff" };
-                            case "IN_PROGRESS":
-                              return { color: "#722ed1", bgColor: "#F9F0FF", borderColor: "#722ed1", label: "Đang xử lý", textColor: "#722ed1" };
-                            case "COMPLETED":
-                              return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Hoàn thành", textColor: "#52c41a" };
-                            case "CANCELLED":
-                              return { color: "#8c8c8c", bgColor: "#FAFAFA", borderColor: "#8c8c8c", label: "Đã hủy", textColor: "#8c8c8c" };
-                            case "BLOCKED":
-                              return { color: "#faad14", bgColor: "#FFFBE6", borderColor: "#faad14", label: "Bị chặn", textColor: "#faad14" };
-                            case "MAINTENANCE":
-                              return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Bảo trì", textColor: "#ff4d4f" };
-                            case "UNAVAILABLE":
-                              return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Không khả dụng", textColor: "#ff4d4f" };
-                            default:
-                              return { color: "#d9d9d9", bgColor: "#fff", borderColor: "#d9d9d9", label: "Không xác định", textColor: "#8c8c8c" };
+                        const canSelect = canSelectSlot(slot);
+                        const isSelected = selectedSlot && selectedSlot.time === slot.time;
+                        
+                        // Get status color and label based on availability
+                        const getSlotStatusInfo = (isAvailable: boolean) => {
+                          if (isAvailable) {
+                            return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Trống", textColor: "#52c41a" };
+                          } else {
+                            return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Không khả dụng", textColor: "#ff4d4f" };
                           }
                         };
                         
-                        const statusInfo = getSlotStatusInfo(slot.status);
+                        const statusInfo = getSlotStatusInfo(slot.isAvailable);
                         
                         return (
                           <TouchableOpacity
-                            key={`${slot.startTime}-${index}`}
+                            key={`${slot.time}-${index}`}
                             onPress={() => canSelect && handleSlotSelect(slot)}
                             disabled={!canSelect}
                             style={{
@@ -1053,15 +1091,10 @@ export default function UpdateBookingScreen() {
                               opacity: canSelect ? 1 : 0.7,
                             }}
                           >
-                            <Text style={{ fontSize: 12, fontWeight: "500" }}>{slot.startTime}</Text>
-                            <Text style={{ fontSize: 10, color: "#666" }}>{slot.endTime}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: "500" }}>{slot.time}</Text>
+                            <Text style={{ fontSize: 10, color: "#666" }}>{endTimeStr}</Text>
                             {!canSelect && (
                               <Text style={{ fontSize: 8, color: statusInfo.textColor, marginTop: 4, fontWeight: "500" }}>
-                                {statusInfo.label}
-                              </Text>
-                            )}
-                            {canSelect && slot.status !== "AVAILABLE" && (
-                              <Text style={{ fontSize: 8, color: statusInfo.textColor, marginTop: 2 }}>
                                 {statusInfo.label}
                               </Text>
                             )}
@@ -1076,7 +1109,7 @@ export default function UpdateBookingScreen() {
                   </View>
                 )}
 
-                {selectedSlot && selectedSlot.bayId === selectedBay.bay_id && (
+                {selectedSlot && (
                   <View
                     style={{
                       marginTop: 12,
@@ -1086,19 +1119,10 @@ export default function UpdateBookingScreen() {
                     }}
                   >
                     <Text style={{ fontWeight: "600" }}>
-                      Slot đã chọn: {selectedSlot.startTime} -{" "}
-                      {new Date(`2000-01-01 ${selectedSlot.startTime}`)
-                        .getTime() +
-                        selectedSlot.serviceDurationMinutes * 60000 &&
-                        new Date(
-                          new Date(`2000-01-01 ${selectedSlot.startTime}`).getTime() +
-                            selectedSlot.serviceDurationMinutes * 60000
-                        )
-                          .toTimeString()
-                          .slice(0, 5)}
+                      Slot đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
                     </Text>
                     <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                      Service Bay: {selectedSlot.bayName} • Ngày: {selectedSlot.date}
+                      Service Bay: {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
                     </Text>
                     {isSlotChanged && (
                       <Button

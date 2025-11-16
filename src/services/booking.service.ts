@@ -8,6 +8,7 @@ export interface BookingItemDto {
 export interface BookingInfoDto {
   booking_id: string;
   booking_code: string;
+  booking_type?: "SCHEDULED" | "WALK_IN"; // SCHEDULED or WALK_IN
   status: string;
   scheduled_start_at: string;
   scheduled_end_at?: string;
@@ -45,7 +46,7 @@ export const bookingService = {
 
   async createBooking(data: any) {
     const res = await axiosInstance.post(
-      "/integrated-booking/create-with-slot",
+      "/bookings/create-with-schedule",
       data
     );
     const api = res.data;

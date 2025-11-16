@@ -217,6 +217,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("🔐 [AuthContext] Checking authentication...");
         const hasTokens = await tokenStorage.hasValidTokens();
         if (hasTokens) {
           const userData = await tokenStorage.getUserData();
@@ -224,6 +225,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const refreshToken = await tokenStorage.getRefreshToken();
           
           if (userData && accessToken && refreshToken) {
+            console.log("✅ [AuthContext] User authenticated:", userData.email);
             // Nếu token không hợp lệ, axios interceptor sẽ tự động refresh khi gọi API
             setState({
               isAuthenticated: true,
@@ -232,11 +234,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
               refreshToken,
               loading: false,
             });
+          } else {
+            console.log("⚠️ [AuthContext] Tokens found but data incomplete");
+            setState({ ...initialState, loading: false });
           }
+        } else {
+          console.log("ℹ️ [AuthContext] No valid tokens found");
+          setState({ ...initialState, loading: false });
         }
       } catch (error) {
-        console.error('Check auth error:', error);
-        setState(initialState);
+        console.error('❌ [AuthContext] Check auth error:', error);
+        setState({ ...initialState, loading: false });
       }
     };
 

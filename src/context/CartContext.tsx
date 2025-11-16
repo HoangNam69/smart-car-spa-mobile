@@ -48,6 +48,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   // Load cart from AsyncStorage on mount
   useEffect(() => {
+    console.log("🛒 [CartContext] Initializing...");
     loadCart();
   }, []);
 
@@ -67,14 +68,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   const loadCart = async () => {
     try {
+      console.log("🛒 [CartContext] Loading cart from storage...");
       const savedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
       if (savedCart) {
-        setCart(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        setCart(parsedCart);
+        console.log("✅ [CartContext] Cart loaded:", parsedCart.length, "items");
+      } else {
+        console.log("ℹ️ [CartContext] No saved cart found");
       }
     } catch (error) {
-      console.error("Error loading cart:", error);
+      console.error("❌ [CartContext] Error loading cart:", error);
     } finally {
       setIsLoading(false);
+      console.log("✅ [CartContext] Initialization complete");
     }
   };
 
@@ -88,24 +95,59 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   const fetchCartPricing = async () => {
     try {
+      // Skip if cart is empty
+      if (cart.length === 0) {
+        return;
+      }
+
       const items = cart.map((item) => ({
-        product_id: item.product.product_id,
+        product_id: item.product?.product_id,
         qty: item.quantity,
-      }));
+      })).filter((item) => item.product_id); // Filter out invalid items
+
+      // Skip if no valid items
+      if (items.length === 0) {
+        return;
+      }
 
       const response = await axiosInstance.post("/pricing/preview-batch", {
         items,
       });
 
+      // Check if response exists
+      if (!response || !response.data) {
+        console.warn("Invalid pricing response: response or response.data is missing");
+        return;
+      }
+
+      // Check if response is successful and has data
+      if (!response.data.success || !response.data.data) {
+        // Only log if it's not a known error format (to avoid noise)
+        if (response.data.message) {
+          console.warn("Pricing API returned error:", response.data.message);
+        }
+        return;
+      }
+
       const pricingData = response.data.data;
+
+      // Validate pricingData structure before accessing items
+      if (!pricingData || !pricingData.items || !Array.isArray(pricingData.items)) {
+        console.warn("Invalid pricing data structure:", {
+          hasPricingData: !!pricingData,
+          hasItems: !!pricingData?.items,
+          itemsIsArray: Array.isArray(pricingData?.items),
+        });
+        return;
+      }
 
       // Update cart with real pricing
       setCart((prevCart) =>
         prevCart.map((item) => {
-          const priceItem = pricingData.items?.find(
-            (p: any) => p.product_id === item.product.product_id
+          const priceItem = pricingData.items.find(
+            (p: any) => p.product_id === item.product?.product_id
           );
-          if (priceItem) {
+          if (priceItem && priceItem.total_price && priceItem.qty) {
             const unitPrice = priceItem.total_price / priceItem.qty;
             return {
               ...item,
@@ -116,8 +158,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           return item;
         })
       );
-    } catch (error) {
-      console.error("Error fetching cart pricing:", error);
+    } catch (error: any) {
+      // Only log non-401 errors (401 errors are handled by axios interceptor)
+      if (error?.response?.status !== 401) {
+        console.error("Error fetching cart pricing:", {
+          message: error?.message,
+          status: error?.response?.status,
+          data: error?.response?.data,
+        });
+      }
+      // Silently fail for 401 errors as they will be handled by auth flow
     }
   };
 

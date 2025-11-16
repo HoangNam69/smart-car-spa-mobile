@@ -2,8 +2,10 @@ import * as Font from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import { View, Text } from "react-native";
 import {
   ActivityIndicator,
+  Button,
   DefaultTheme,
   PaperProvider,
 } from "react-native-paper";
@@ -24,19 +26,29 @@ const paperTheme = {
 
 export default function RootLayout() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     async function loadFonts() {
-      await Font.loadAsync({
-        "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
-        "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
-        "Roboto-Bold": require("../assets/fonts/Roboto-Bold.ttf"),
-      }).catch((e: any) => {
+      try {
+        await Font.loadAsync({
+          "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
+          "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
+          "Roboto-Bold": require("../assets/fonts/Roboto-Bold.ttf"),
+        });
+        setFontsLoaded(true);
+      } catch (e: any) {
         console.warn("Font load failed:", e);
-      });
-      setFontsLoaded(true);
+        // Continue even if fonts fail to load
+        setFontsLoaded(true);
+      }
     }
     loadFonts();
+  }, []);
+
+  // Log initialization
+  useEffect(() => {
+    console.log("✅ RootLayout initialized");
   }, []);
 
   if (!fontsLoaded) {
@@ -44,6 +56,22 @@ export default function RootLayout() {
     return (
       <SafeAreaProvider>
         <ActivityIndicator style={{ flex: 1, justifyContent: "center" }} />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaProvider>
+        <PaperProvider theme={theme}>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>
+              Đã xảy ra lỗi
+            </Text>
+            <Text style={{ color: "red", marginBottom: 20 }}>{error.message}</Text>
+            <Button onPress={() => setError(null)}>Thử lại</Button>
+          </View>
+        </PaperProvider>
       </SafeAreaProvider>
     );
   }

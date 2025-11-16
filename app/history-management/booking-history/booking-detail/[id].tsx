@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../../src/context/AuthContext";
 import { bookingService } from "../../../../src/services/booking.service";
-import { BookingInfoDto } from "../../../../src/types/booking.types";
+import { BookingInfoDto, BookingType } from "../../../../src/types/booking.types";
 
 export default function BookingDetailScreen() {
   const theme = useTheme();
@@ -139,7 +139,19 @@ export default function BookingDetailScreen() {
   }
 
   const statusColor = getStatusColor(booking.status);
-  const canUpdate = ["PENDING", "CONFIRMED", "CHECKED_IN"].includes((booking.status || "").toUpperCase());
+  
+  // Only allow update for SCHEDULED bookings
+  // Fallback: Nếu booking_type không có, kiểm tra booking_code
+  // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
+  const bookingType = booking.booking_type as string | undefined;
+  const isScheduledBooking = 
+    bookingType === BookingType.SCHEDULED || 
+    bookingType === "SCHEDULED" ||
+    (!bookingType && booking.booking_code?.startsWith("BK-"));
+  
+  // Only allow update for PENDING or CONFIRMED status (giống web)
+  const statusUpper = (booking.status || "").toUpperCase();
+  const canUpdate = isScheduledBooking && (statusUpper === "PENDING" || statusUpper === "CONFIRMED");
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>

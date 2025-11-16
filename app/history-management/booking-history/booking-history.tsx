@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
 import { bookingService, type BookingInfoDto as BookingServiceDto } from "../../../src/services/booking.service";
+import { BookingType } from "../../../src/types/booking.types";
 
 export default function BookingHistoryScreen() {
   const theme = useTheme();
@@ -102,14 +103,25 @@ export default function BookingHistoryScreen() {
     setCancelling(true);
     try {
       await bookingService.cancelBooking(cancellingBooking.booking_id);
-      // Đóng modal ngay lập tức khi thành công
+      // Đóng modal trước
       setCancelModal(false);
       setCancellingBooking(null);
+      // Hiển thị thông báo thành công
       setSnackbar({ visible: true, message: "Hủy booking thành công!", error: false });
-      // Refresh bookings
-      await fetchData();
+      // Refresh bookings sau khi modal đóng để cập nhật danh sách
+      // Sử dụng setTimeout nhỏ để đảm bảo modal đã đóng hoàn toàn trước khi reload
+      setTimeout(async () => {
+        await fetchData();
+      }, 300);
     } catch (e: any) {
+      // Đóng modal ngay cả khi có lỗi
+      setCancelModal(false);
+      setCancellingBooking(null);
       setSnackbar({ visible: true, message: e?.message || "Hủy booking thất bại", error: true });
+      // Vẫn refresh để đảm bảo dữ liệu đồng bộ
+      setTimeout(async () => {
+        await fetchData();
+      }, 300);
     } finally {
       setCancelling(false);
     }
@@ -125,14 +137,38 @@ export default function BookingHistoryScreen() {
     setCancellingBooking(null);
   };
 
-  const canCancelBooking = (status?: string) => {
-    const statusUpper = (status || "").toUpperCase();
+  const canCancelBooking = (booking: BookingServiceDto) => {
+    // Only allow cancellation for SCHEDULED bookings
+    // Fallback: Nếu booking_type không có, kiểm tra booking_code
+    // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
+    const bookingType = booking.booking_type as string | undefined;
+    const isScheduledBooking = 
+      bookingType === BookingType.SCHEDULED || 
+      bookingType === "SCHEDULED" ||
+      (!bookingType && booking.booking_code?.startsWith("BK-"));
+    
+    if (!isScheduledBooking) return false;
+
+    // Only allow cancellation for PENDING or CONFIRMED status
+    const statusUpper = (booking.status || "").toUpperCase();
     return statusUpper === "PENDING" || statusUpper === "CONFIRMED";
   };
 
-  const canUpdateBooking = (status?: string) => {
-    const statusUpper = (status || "").toUpperCase();
-    return statusUpper === "PENDING" || statusUpper === "CONFIRMED" || statusUpper === "CHECKED_IN";
+  const canUpdateBooking = (booking: BookingServiceDto) => {
+    // Only allow update for SCHEDULED bookings
+    // Fallback: Nếu booking_type không có, kiểm tra booking_code
+    // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
+    const bookingType = booking.booking_type as string | undefined;
+    const isScheduledBooking = 
+      bookingType === BookingType.SCHEDULED || 
+      bookingType === "SCHEDULED" ||
+      (!bookingType && booking.booking_code?.startsWith("BK-"));
+    
+    if (!isScheduledBooking) return false;
+
+    // Only allow update for PENDING or CONFIRMED status (giống web)
+    const statusUpper = (booking.status || "").toUpperCase();
+    return statusUpper === "PENDING" || statusUpper === "CONFIRMED";
   };
 
   const renderItem = ({ item }: { item: BookingServiceDto }) => (
@@ -175,7 +211,7 @@ export default function BookingHistoryScreen() {
           </Chip>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {canUpdateBooking(item.status) && (
+          {canUpdateBooking(item) && (
             <Button
               mode="outlined"
               icon="pencil"
@@ -189,7 +225,7 @@ export default function BookingHistoryScreen() {
               Cập nhật
             </Button>
           )}
-          {canCancelBooking(item.status) && (
+          {canCancelBooking(item) && (
             <Button
               mode="outlined"
               icon="close-circle"
@@ -288,7 +324,11 @@ export default function BookingHistoryScreen() {
 
       {/* Cancel Booking Dialog */}
       <Portal>
-        <Dialog visible={cancelModal} onDismiss={closeCancelModal}>
+        <Dialog 
+          visible={cancelModal} 
+          onDismiss={cancelling ? undefined : closeCancelModal}
+          dismissable={!cancelling}
+        >
           <Dialog.Title>Xác nhận hủy booking</Dialog.Title>
           <Dialog.Content>
             <Text>
@@ -297,7 +337,10 @@ export default function BookingHistoryScreen() {
             </Text>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={closeCancelModal} disabled={cancelling}>
+            <Button 
+              onPress={closeCancelModal} 
+              disabled={cancelling}
+            >
               Đóng
             </Button>
             <Button

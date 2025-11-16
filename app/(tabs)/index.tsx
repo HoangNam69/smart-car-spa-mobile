@@ -5,6 +5,8 @@ import { Image, View, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
+  console.log("🏠 [Index] Rendering home screen...");
+  
   return (
     <SafeAreaView
       style={styles.container}
