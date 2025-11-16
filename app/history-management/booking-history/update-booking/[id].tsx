@@ -21,7 +21,6 @@ import { useAuth } from "../../../../src/context/AuthContext";
 import { bookingService } from "../../../../src/services/booking.service";
 import { 
   bookingScheduleService, 
-  TimeSlotDto,
   SlotInfo,
   AvailableTimeRangesResponse,
 } from "../../../../src/services/bookingSchedule.service";
@@ -35,6 +34,8 @@ interface SelectedSlot {
   time: string; // HH:mm format
   endTime: string; // HH:mm format (calculated)
   serviceDurationMinutes: number;
+  bayId?: string; // Optional: bay ID
+  date?: string; // Optional: date in YYYY-MM-DD format
 }
 
 export default function UpdateBookingScreen() {
@@ -184,7 +185,7 @@ export default function UpdateBookingScreen() {
               console.log("✅ Found matching service by service_id:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
-                service: priceBookItem.service?.service_name,
+                service: priceBookItem.service,
               });
               services.push(priceBookItem);
               seenServiceIds.add(item.service_id);
@@ -280,6 +281,8 @@ export default function UpdateBookingScreen() {
                   time: startTime,
                   endTime: endTime,
                   serviceDurationMinutes: serviceDuration,
+                  bayId: bay.bay_id,
+                  date: formatDateString(slotDate),
                 };
                 setSelectedSlot(slot);
                 setOriginalSlot(slot);
@@ -450,8 +453,6 @@ export default function UpdateBookingScreen() {
   // Also restore original slot if we're back on the original bay and date
   useEffect(() => {
     if (selectedBay && availableSlots.length > 0 && originalSlot) {
-      const currentDateStr = formatDateString(bookingDate);
-      
       // Check if we should restore the original slot
       // We restore if:
       // 1. We're on the original bay (check by comparing with booking.bay_id)
@@ -511,8 +512,11 @@ export default function UpdateBookingScreen() {
       return timeRangesData.available_time_ranges.some((range) => {
         const rangeStart = bookingScheduleService.parseTime(range.start_time);
         const rangeEnd = bookingScheduleService.parseTime(range.end_time);
-        // Slot is suitable if it starts within range and ends before range ends
-        return slotStartMinutes >= rangeStart && slotEndMinutes <= rangeEnd;
+        // Slot is suitable if it starts within range and ends before or at range ends
+        // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
+        // We allow a small tolerance (1 minute) for rounding differences
+        const TOLERANCE_MINUTES = 1;
+        return slotStartMinutes >= rangeStart && slotEndMinutes <= (rangeEnd + TOLERANCE_MINUTES);
       });
     },
     [timeRangesData, totalDuration]
@@ -548,12 +552,14 @@ export default function UpdateBookingScreen() {
           time: slot.time,
           endTime: endTime,
           serviceDurationMinutes: Math.max(totalDuration, 30),
+          bayId: selectedBay?.bay_id,
+          date: formatDateString(bookingDate),
         };
         setSelectedSlot(newSlot);
         setIsSlotChanged(true);
       }
     },
-    [canSelectSlot, totalDuration, isDurationExceedsOriginal]
+    [canSelectSlot, totalDuration, isDurationExceedsOriginal, selectedBay?.bay_id, bookingDate]
   );
 
   // Helper function to build booking_items array for API
@@ -848,66 +854,6 @@ export default function UpdateBookingScreen() {
           </Card.Content>
         </Card>
 
-        {/* Service Selection */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-          <Card.Title title="Dịch vụ" />
-          <Divider />
-          <Card.Content>
-            <List.Item
-              title="Dịch vụ chăm sóc xe"
-              description={`Đã chọn: ${selectedItems.length} dịch vụ`}
-              left={(props) => <List.Icon {...props} icon="wrench" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => setServiceModal(true)}
-              style={{ paddingHorizontal: 0 }}
-            />
-            {selectedItems.length > 0 && (
-              <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {selectedItems.map((item) => (
-                  <Chip
-                    key={item.item_id}
-                    onClose={() => {
-                      // Prevent event propagation to avoid circular reference
-                      // Filter out the removed item
-                      const newItems = selectedItems.filter((i) => i.item_id !== item.item_id);
-                      setSelectedItems(newItems);
-                      console.log("🗑️ Service removed from selection:", {
-                        removedItem: item.item_name,
-                        service_id: item.service?.service_id,
-                        remainingItems: newItems.length,
-                      });
-                    }}
-                    style={{ marginBottom: 4 }}
-                  >
-                    {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
-                  </Chip>
-                ))}
-              </View>
-            )}
-            {isDurationExceedsOriginal && isSlotBooking && (
-              <View style={{ marginTop: 12, padding: 12, backgroundColor: "#FFEBEE", borderRadius: 8 }}>
-                <Text style={{ color: "#d32f2f", fontSize: 12 }}>
-                  ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các slot đã đặt ban đầu. Vui lòng chọn lại dịch vụ.
-                </Text>
-              </View>
-            )}
-            <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
-              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
-                <Text style={{ color: "#52c41a", fontSize: 18, fontWeight: "600" }}>
-                  {totalPrice.toLocaleString()} VNĐ
-                </Text>
-                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng giá</Text>
-              </View>
-              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
-                <Text style={{ color: "#1890ff", fontSize: 18, fontWeight: "600" }}>
-                  {totalDuration} phút
-                </Text>
-                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng thời gian</Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-
         {/* Branch and Slot Selection */}
         <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
           <Card.Title title="Thời gian và địa điểm" />
@@ -970,11 +916,78 @@ export default function UpdateBookingScreen() {
                 style={{ paddingHorizontal: 0 }}
               />
             </View>
+          </Card.Content>
+        </Card>
 
-            {/* Bay Selection */}
-            {selectedBranch && bookingDate && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Service Bay</Text>
+        {/* Service Selection */}
+        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <Card.Title title="Dịch vụ" />
+          <Divider />
+          <Card.Content>
+            <List.Item
+              title="Dịch vụ chăm sóc xe"
+              description={`Đã chọn: ${selectedItems.length} dịch vụ`}
+              left={(props) => <List.Icon {...props} icon="wrench" />}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => setServiceModal(true)}
+              style={{ paddingHorizontal: 0 }}
+            />
+            {selectedItems.length > 0 && (
+              <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {selectedItems.map((item) => (
+                  <Chip
+                    key={item.item_id}
+                    onClose={() => {
+                      // Prevent event propagation to avoid circular reference
+                      // Filter out the removed item
+                      const newItems = selectedItems.filter((i) => i.item_id !== item.item_id);
+                      setSelectedItems(newItems);
+                      console.log("🗑️ Service removed from selection:", {
+                        removedItem: item.item_name,
+                        service_id: item.service?.service_id,
+                        remainingItems: newItems.length,
+                      });
+                    }}
+                    style={{ marginBottom: 4 }}
+                  >
+                    {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
+                  </Chip>
+                ))}
+              </View>
+            )}
+            {isDurationExceedsOriginal && isSlotBooking && (
+              <View style={{ marginTop: 12, padding: 12, backgroundColor: "#FFEBEE", borderRadius: 8 }}>
+                <Text style={{ color: "#d32f2f", fontSize: 12 }}>
+                  ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các slot đã đặt ban đầu. Vui lòng chọn lại dịch vụ.
+                </Text>
+              </View>
+            )}
+            <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
+              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
+                <Text style={{ color: "#52c41a", fontSize: 18, fontWeight: "600" }}>
+                  {totalPrice.toLocaleString()} VNĐ
+                </Text>
+                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng giá</Text>
+              </View>
+              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
+                <Text style={{ color: "#1890ff", fontSize: 18, fontWeight: "600" }}>
+                  {totalDuration} phút
+                </Text>
+                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng thời gian</Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Bay and Slot Selection */}
+        {isSlotBooking && selectedBranch && bookingDate && (
+          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+            <Card.Title title="Khu vực chăm sóc và thời gian" />
+            <Divider />
+            <Card.Content>
+              {/* Bay Selection */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Khu vực dịch vụ</Text>
                 {isDurationExceedsOriginal && (
                   <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFEBEE", borderRadius: 8 }}>
                     <Text style={{ color: "#d32f2f", fontSize: 12 }}>
@@ -986,6 +999,13 @@ export default function UpdateBookingScreen() {
                   <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#E3F2FD", borderRadius: 8 }}>
                     <Text style={{ fontSize: 12 }}>
                       Dịch vụ yêu cầu {Math.ceil(totalDuration / 60)} slot liên tiếp ({totalDuration} phút)
+                    </Text>
+                  </View>
+                )}
+                {totalDuration <= 0 && (
+                  <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                    <Text style={{ fontSize: 12, color: "#faad14" }}>
+                      Vui lòng chọn dịch vụ để xem các mốc thời gian khả dụng
                     </Text>
                   </View>
                 )}
@@ -1025,128 +1045,121 @@ export default function UpdateBookingScreen() {
                         }}
                       >
                         <Text style={{ fontWeight: "600" }}>{bay.bay_name}</Text>
-                        <Text style={{ fontSize: 10, color: "#666", marginTop: 4 }}>60 phút/slot</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </ScrollView>
               </View>
-            )}
 
-            {/* Slot Selection */}
-            {selectedBay && isSlotBooking && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
-                  Chọn Slot trong {selectedBay.bay_name}
-                </Text>
-                {loadingSlots ? (
-                  <View style={{ padding: 20, alignItems: "center" }}>
-                    <ActivityIndicator />
-                    <Text style={{ marginTop: 8, fontSize: 12 }}>Đang tải danh sách slot...</Text>
-                  </View>
-                ) : availableSlots.length > 0 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      {availableSlots.map((slot, index) => {
-                        // Calculate end time for display
-                        const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
-                        const slotEndMinutes = slotStartMinutes + Math.max(totalDuration, 30);
-                        const endTimeStr = bookingScheduleService.formatTime(slotEndMinutes);
-                        
-                        const canSelect = canSelectSlot(slot);
-                        const isSelected = selectedSlot && selectedSlot.time === slot.time;
-                        
-                        // Get status color and label based on availability
-                        const getSlotStatusInfo = (isAvailable: boolean) => {
-                          if (isAvailable) {
-                            return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Trống", textColor: "#52c41a" };
-                          } else {
-                            return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Không khả dụng", textColor: "#ff4d4f" };
-                          }
-                        };
-                        
-                        const statusInfo = getSlotStatusInfo(slot.isAvailable);
-                        
-                        return (
-                          <TouchableOpacity
-                            key={`${slot.time}-${index}`}
-                            onPress={() => canSelect && handleSlotSelect(slot)}
-                            disabled={!canSelect}
-                            style={{
-                              padding: 12,
-                              borderRadius: 8,
-                              borderWidth: 2,
-                              borderColor: isSelected
-                                ? "#52c41a"
-                                : canSelect
-                                ? "#d9d9d9"
-                                : statusInfo.borderColor,
-                              backgroundColor: isSelected
-                                ? "#F6FFED"
-                                : canSelect
-                                ? "#fff"
-                                : statusInfo.bgColor,
-                              minWidth: 80,
-                              alignItems: "center",
-                              opacity: canSelect ? 1 : 0.7,
-                            }}
-                          >
-                            <Text style={{ fontSize: 12, fontWeight: "500" }}>{slot.time}</Text>
-                            <Text style={{ fontSize: 10, color: "#666" }}>{endTimeStr}</Text>
-                            {!canSelect && (
-                              <Text style={{ fontSize: 8, color: statusInfo.textColor, marginTop: 4, fontWeight: "500" }}>
-                                {statusInfo.label}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
+              {/* Slot Selection */}
+              {selectedBay && totalDuration > 0 && (
+                <View style={{ marginTop: 16 }}>
+                  <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
+                    Chọn thời gian
+                  </Text>
+                  {loadingSlots ? (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      <ActivityIndicator />
+                      <Text style={{ marginTop: 8, fontSize: 12 }}>Đang tải danh sách slot...</Text>
                     </View>
-                  </ScrollView>
-                ) : (
-                  <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
-                    <Text style={{ fontSize: 12 }}>Không có slot khả dụng</Text>
-                  </View>
-                )}
+                  ) : availableSlots.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ flexDirection: "row", gap: 8 }}>
+                        {availableSlots.map((slot, index) => {
+                          const canSelect = canSelectSlot(slot);
+                          const isSelected = selectedSlot && selectedSlot.time === slot.time;
+                          
+                          // Get status color and label based on availability
+                          const getSlotStatusInfo = (isAvailable: boolean) => {
+                            if (isAvailable) {
+                              return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Trống", textColor: "#52c41a" };
+                            } else {
+                              return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Không khả dụng", textColor: "#ff4d4f" };
+                            }
+                          };
+                          
+                          const statusInfo = getSlotStatusInfo(slot.isAvailable);
+                          
+                          return (
+                            <TouchableOpacity
+                              key={`${slot.time}-${index}`}
+                              onPress={() => canSelect && handleSlotSelect(slot)}
+                              disabled={!canSelect}
+                              style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                borderWidth: 2,
+                                borderColor: isSelected
+                                  ? "#52c41a"
+                                  : canSelect
+                                  ? "#d9d9d9"
+                                  : statusInfo.borderColor,
+                                backgroundColor: isSelected
+                                  ? "#F6FFED"
+                                  : canSelect
+                                  ? "#fff"
+                                  : statusInfo.bgColor,
+                                minWidth: 80,
+                                alignItems: "center",
+                                opacity: canSelect ? 1 : 0.7,
+                              }}
+                            >
+                              <Text style={{ fontSize: 14, fontWeight: "600" }}>{slot.time}</Text>
+                              {!canSelect && (
+                                <Text style={{ fontSize: 8, color: statusInfo.textColor, marginTop: 4, fontWeight: "500" }}>
+                                  {statusInfo.label}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+                  ) : (
+                    <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                      <Text style={{ fontSize: 12 }}>Không có slot khả dụng</Text>
+                    </View>
+                  )}
 
-                {selectedSlot && (
-                  <View
-                    style={{
-                      marginTop: 12,
-                      padding: 12,
-                      backgroundColor: isSlotChanged ? "#E6F7FF" : "#F3F4F6",
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text style={{ fontWeight: "600" }}>
-                      Slot đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                      Service Bay: {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
-                    </Text>
-                    {isSlotChanged && (
-                      <Button
-                        mode="text"
-                        compact
-                        onPress={() => {
-                          if (originalSlot) {
-                            setSelectedSlot(originalSlot);
-                          } else {
-                            setSelectedSlot(null);
-                          }
-                          setIsSlotChanged(false);
-                        }}
-                        style={{ marginTop: 8 }}
-                      >
-                        Hủy chọn slot
-                      </Button>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </Card.Content>
-        </Card>
+                  {selectedSlot && (
+                    <View
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        backgroundColor: isSlotChanged ? "#E6F7FF" : "#F3F4F6",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ fontWeight: "600" }}>
+                        Slot đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                        Service Bay: {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
+                      </Text>
+                      {isSlotChanged && (
+                        <Button
+                          mode="text"
+                          compact
+                          onPress={() => {
+                            if (originalSlot) {
+                              setSelectedSlot(originalSlot);
+                            } else {
+                              setSelectedSlot(null);
+                            }
+                            setIsSlotChanged(false);
+                          }}
+                          style={{ marginTop: 8 }}
+                        >
+                          Hủy chọn slot
+                        </Button>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Notes */}
         <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>

@@ -118,8 +118,12 @@ export const bookingScheduleService = {
       const isAvailable = timeRanges.some((range) => {
         const rangeStart = this.parseTime(range.start_time);
         const rangeEnd = this.parseTime(range.end_time);
-        // Slot is available if it starts within range and ends before range ends
-        return current >= rangeStart && slotEnd <= rangeEnd;
+        // Slot is available if it starts within range and ends before or at range ends
+        // Note: slotEnd can equal rangeEnd (e.g., slot 8:00-8:30 fits in range 8:00-8:30)
+        // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
+        // We allow a small tolerance (1 minute) for rounding differences
+        const TOLERANCE_MINUTES = 1;
+        return current >= rangeStart && slotEnd <= (rangeEnd + TOLERANCE_MINUTES);
       });
 
       slots.push({

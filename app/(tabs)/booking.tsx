@@ -119,19 +119,22 @@ export default function BookingScreen() {
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
       if (!slot.isAvailable) return false;
-
+      
       // Calculate end time for this slot
       const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
       const slotEndMinutes = slotStartMinutes + totalDuration;
-
+      
       // Check if slot fits within any available time range
       if (!timeRangesData) return false;
-
+      
       return timeRangesData.available_time_ranges.some((range) => {
         const rangeStart = bookingScheduleService.parseTime(range.start_time);
         const rangeEnd = bookingScheduleService.parseTime(range.end_time);
-        // Slot is suitable if it starts within range and ends before range ends
-        return slotStartMinutes >= rangeStart && slotEndMinutes <= rangeEnd;
+        // Slot is suitable if it starts within range and ends before or at range ends
+        // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
+        // We allow a small tolerance (1 minute) for rounding differences
+        const TOLERANCE_MINUTES = 1;
+        return slotStartMinutes >= rangeStart && slotEndMinutes <= (rangeEnd + TOLERANCE_MINUTES);
       });
     },
     [timeRangesData, totalDuration]
