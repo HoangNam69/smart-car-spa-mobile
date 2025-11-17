@@ -257,10 +257,10 @@ export default function BookingDetailScreen() {
               <Card.Content style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
                 {booking.booking_items.map((item, index) => (
                   <View key={index} style={{ marginTop: index > 0 ? 16 : 8 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "600" }}>{safeString(item.item_name)}</Text>
-                    {item.item_description ? (
+                    <Text style={{ fontSize: 15, fontWeight: "600" }}>{safeString(item.service_name)}</Text>
+                    {item.service_description ? (
                       <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
-                        {safeString(item.item_description)}
+                        {safeString(item.service_description)}
                       </Text>
                     ) : null}
                     {item.unit_price ? (
@@ -379,14 +379,6 @@ export default function BookingDetailScreen() {
                         : booking.payment_status || ""
                     )}
                   </Chip>
-                </View>
-              ) : null}
-              {booking.deposit_amount ? (
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ color: "#6b7280", fontSize: 12 }}>Tiền đặt cọc</Text>
-                  <Text style={{ fontSize: 15, fontWeight: "600", marginTop: 4 }}>
-                    {safeString(`${(booking.deposit_amount || 0).toLocaleString()} ${booking.currency || "VND"}`)}
-                  </Text>
                 </View>
               ) : null}
             </Card.Content>

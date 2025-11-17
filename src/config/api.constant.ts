@@ -26,13 +26,14 @@ export const API_ENDPOINTS = {
   BOOKING: {
     GET_ALL: "/bookings",
     GET_BY_ID: "/bookings/{id}",
-    CREATE: "/bookings/create",
+    CREATE_WITH_SCHEDULE: "/bookings/create-with-schedule",
     UPDATE: "/bookings/{id}/update",
     CANCEL: "/bookings/{id}/cancel",
     CONFIRM: "/bookings/{id}/confirm",
     CHECK_IN: "/bookings/{id}/check-in",
     START: "/bookings/{id}/start",
     COMPLETE: "/bookings/{id}/complete",
+    CHANGE_SCHEDULE: "/bookings/{id}/change-slot",
   },
   SERVICE: {
     GET_ALL: "/services/get-all",

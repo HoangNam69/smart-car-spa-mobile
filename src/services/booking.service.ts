@@ -1,28 +1,5 @@
 import axiosInstance from "../config/axiosConfig";
-
-export interface BookingItemDto {
-  service_id?: string;
-  item_name?: string;
-}
-
-export interface BookingInfoDto {
-  booking_id: string;
-  booking_code: string;
-  booking_type?: "SCHEDULED" | "WALK_IN"; // SCHEDULED or WALK_IN
-  status: string;
-  scheduled_start_at: string;
-  scheduled_end_at?: string;
-  total_price?: number;
-  currency?: string;
-  branch_id?: string;
-  branch_name?: string;
-  bay_name?: string;
-  vehicle_license_plate?: string;
-  vehicle_brand_name?: string;
-  vehicle_model_name?: string;
-  payment_status?: string;
-  booking_items?: BookingItemDto[];
-}
+import { BookingInfoDto, CreateBookingWithScheduleRequest, UpdateBookingRequest } from "../types/booking.types";
 
 export const bookingService = {
   async getCustomerBookings(userId: string): Promise<BookingInfoDto[]> {
@@ -44,7 +21,7 @@ export const bookingService = {
     return [];
   },
 
-  async createBooking(data: any) {
+  async createBooking(data: CreateBookingWithScheduleRequest): Promise<BookingInfoDto> {
     const res = await axiosInstance.post(
       "/bookings/create-with-schedule",
       data
@@ -66,7 +43,7 @@ export const bookingService = {
     }
   },
 
-  async updateBooking(bookingId: string, data: any): Promise<BookingInfoDto> {
+  async updateBooking(bookingId: string, data: UpdateBookingRequest): Promise<BookingInfoDto> {
     const res = await axiosInstance.post(`/bookings/${bookingId}/update`, data);
     const api = res.data;
     if (!api?.success || !api?.data)

@@ -16,8 +16,8 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
-import { bookingService, type BookingInfoDto as BookingServiceDto } from "../../../src/services/booking.service";
-import { BookingType } from "../../../src/types/booking.types";
+import { bookingService } from "../../../src/services/booking.service";
+import { BookingInfoDto as BookingServiceDto, BookingType } from "../../../src/types/booking.types";
 
 export default function BookingHistoryScreen() {
   const theme = useTheme();
@@ -181,7 +181,7 @@ export default function BookingHistoryScreen() {
     >
       <Card.Title
         title={item.booking_code}
-        subtitle={`${new Date(item.scheduled_start_at).toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
+        subtitle={`${item.scheduled_start_at ? new Date(item.scheduled_start_at).toLocaleString() : "Chưa có lịch"} • ${item.branch_name || "Chi nhánh"}`}
         right={() => (
           <Badge size={10} style={{ backgroundColor: statusToColor(item.status), marginRight: 16 }} />
         )}

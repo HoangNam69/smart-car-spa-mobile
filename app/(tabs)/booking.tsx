@@ -519,8 +519,8 @@ export default function BookingScreen() {
       // - Calculate scheduled_start_at and scheduled_end_at from selected_schedule
       const payload = {
         customer_id: user.user_id,
-        customer_name: user.full_name,
-        customer_phone: user.phone_number,
+        customer_name: user.full_name || "",
+        customer_phone: user.phone_number || "",
         customer_email: user.email,
         vehicle_id: vehicle.vehicle_id,
         vehicle_license_plate: vehicle.license_plate,

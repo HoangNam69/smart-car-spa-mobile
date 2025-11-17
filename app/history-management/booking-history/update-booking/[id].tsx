@@ -3,32 +3,34 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import {
-    ActivityIndicator,
-    Button,
-    Card,
-    Chip,
-    Divider,
-    List,
-    Modal,
-    Portal,
-    Snackbar,
-    Text,
-    TextInput,
-    useTheme,
+  ActivityIndicator,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  List,
+  Modal,
+  Portal,
+  Snackbar,
+  Text,
+  TextInput,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../../src/context/AuthContext";
 import { bookingService } from "../../../../src/services/booking.service";
-import { 
-  bookingScheduleService, 
-  SlotInfo,
+import {
   AvailableTimeRangesResponse,
+  bookingScheduleService,
+  SlotInfo,
 } from "../../../../src/services/bookingSchedule.service";
 import { BranchDisplay, branchService } from "../../../../src/services/branch.service";
 import { PriceBookItem, pricingService } from "../../../../src/services/pricing.service";
+import { enrichServicesWithInventory } from "../../../../src/services/service-inventory.service";
 import { ServiceBay, serviceBayService } from "../../../../src/services/serviceBay.service";
 import { VehicleProfileDto, vehicleProfileService } from "../../../../src/services/vehicleProfile.service";
-import { BookingInfoDto, CreateBookingItemRequest } from "../../../../src/types/booking.types";
+import { BookingInfoDto, BookingType, CreateBookingItemRequest, UpdateBookingRequest } from "../../../../src/types/booking.types";
+import { Service, SkillLevel } from "../../../../src/types/service.types";
 
 interface SelectedSlot {
   time: string; // HH:mm format
@@ -37,6 +39,49 @@ interface SelectedSlot {
   bayId?: string; // Optional: bay ID
   date?: string; // Optional: date in YYYY-MM-DD format
 }
+
+// Helper function to detect booking type with fallback to booking_code
+// Similar to web app's detectBookingType function
+const detectBookingType = (
+  booking: BookingInfoDto
+): {
+  isWalkIn: boolean;
+  isSlot: boolean;
+  bookingType: BookingType | null;
+} => {
+  // First, try to use booking_type from backend
+  if (booking.booking_type === BookingType.WALK_IN) {
+    return { isWalkIn: true, isSlot: false, bookingType: BookingType.WALK_IN };
+  }
+  if (booking.booking_type === BookingType.SCHEDULED) {
+    return {
+      isWalkIn: false,
+      isSlot: true,
+      bookingType: BookingType.SCHEDULED,
+    };
+  }
+
+  // Fallback: detect from booking_code if booking_type is undefined
+  if (booking.booking_code) {
+    if (booking.booking_code.startsWith("WALK-IN-")) {
+      return {
+        isWalkIn: true,
+        isSlot: false,
+        bookingType: BookingType.WALK_IN,
+      };
+    }
+    if (booking.booking_code.startsWith("BK-")) {
+      return {
+        isWalkIn: false,
+        isSlot: true,
+        bookingType: BookingType.SCHEDULED,
+      };
+    }
+  }
+
+  // Default: unknown type
+  return { isWalkIn: false, isSlot: false, bookingType: null };
+};
 
 export default function UpdateBookingScreen() {
   const theme = useTheme();
@@ -78,8 +123,10 @@ export default function UpdateBookingScreen() {
   // Dropdown data
   const [userVehicles, setUserVehicles] = useState<VehicleProfileDto[]>([]);
   const [branches, setBranches] = useState<BranchDisplay[]>([]);
-  const [availableServices, setAvailableServices] = useState<PriceBookItem[]>([]);
+  const [allPriceBookServices, setAllPriceBookServices] = useState<PriceBookItem[]>([]); // Store all services from pricing
+  const [availableServices, setAvailableServices] = useState<PriceBookItem[]>([]); // Filtered services based on inventory
   const [serviceBays, setServiceBays] = useState<ServiceBay[]>([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Modal states
   const [vehicleModal, setVehicleModal] = useState(false);
@@ -127,7 +174,8 @@ export default function UpdateBookingScreen() {
 
       setUserVehicles(vehicles);
       setBranches(branchesData);
-      setAvailableServices(servicesData);
+      setAllPriceBookServices(servicesData); // Store all services
+      setAvailableServices(servicesData); // Initially set to all services, will be filtered by inventory
 
       // Set selected vehicle - try multiple ways to find vehicle
       if (bookingData.vehicle_id) {
@@ -173,7 +221,7 @@ export default function UpdateBookingScreen() {
         bookingData.booking_items.forEach((item) => {
           console.log("🔍 Processing booking item:", {
             service_id: item.service_id,
-            item_name: item.item_name,
+            service_name: item.service_name,
           });
 
           // Primary: Try to match by service_id
@@ -193,14 +241,14 @@ export default function UpdateBookingScreen() {
             } else {
               console.warn("⚠️ Service not found by service_id:", item.service_id);
             }
-          } else if (!item.service_id && item.item_name) {
-            // Fallback: Try to match by item_name if service_id is null
-            console.log("⚠️ service_id is null, trying to match by item_name:", item.item_name);
+          } else if (!item.service_id && item.service_name) {
+            // Fallback: Try to match by service_name if service_id is null
+            console.log("⚠️ service_id is null, trying to match by service_name:", item.service_name);
             const priceBookItem = servicesData.find(
-              (s) => s.item_name === item.item_name && s.service && !seenServiceIds.has(s.item_id)
+              (s) => s.item_name === item.service_name && s.service && !seenServiceIds.has(s.item_id)
             );
             if (priceBookItem) {
-              console.log("✅ Found matching service by item_name:", {
+              console.log("✅ Found matching service by service_name:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service_id: priceBookItem.service?.service_id,
@@ -211,7 +259,7 @@ export default function UpdateBookingScreen() {
               }
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.warn("⚠️ Service not found by item_name:", item.item_name);
+              console.warn("⚠️ Service not found by service_name:", item.service_name);
             }
           }
         });
@@ -261,21 +309,38 @@ export default function UpdateBookingScreen() {
           const filteredBays = bays.filter((bay) => bay.allow_booking !== false);
           setServiceBays(filteredBays);
 
-          // Set bay and slot for slot bookings
-          const isSlotBooking = bookingData.booking_code?.startsWith("BK") || false;
-          if (isSlotBooking && bookingData.bay_id && bookingData.scheduled_start_at && bookingData.slot_start_time) {
+          // Set bay for both slot and walk-in bookings
+          if (bookingData.bay_id) {
             const bay = filteredBays.find((b) => b.bay_id === bookingData.bay_id) || 
                         bays.find((b) => b.bay_id === bookingData.bay_id);
             if (bay) {
               setSelectedBay(bay);
+              console.log("✅ Set selected bay:", bay.bay_name);
+            }
+          }
+
+          // Set slot for slot bookings (SCHEDULED bookings with scheduled_start_at)
+          // Use detectBookingType helper function for consistency
+          const { isSlot: isSlotBooking } = detectBookingType(bookingData);
+          if (isSlotBooking && bookingData.bay_id && bookingData.scheduled_start_at) {
+            const bay = filteredBays.find((b) => b.bay_id === bookingData.bay_id) || 
+                        bays.find((b) => b.bay_id === bookingData.bay_id);
+            if (bay) {
               const slotDate = parseAndNormalizeDate(bookingData.scheduled_start_at);
               if (slotDate) {
+                // Extract time from scheduled_start_at (format: YYYY-MM-DDTHH:mm:ss or ISO string)
+                const scheduledStart = new Date(bookingData.scheduled_start_at);
+                const hours = scheduledStart.getHours();
+                const minutes = scheduledStart.getMinutes();
+                const startTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+                
                 const serviceDuration = bookingData.estimated_duration_minutes || 60;
-                const startTime = bookingData.slot_start_time || "";
                 // Calculate end time
-                const startMinutes = bookingScheduleService.parseTime(startTime);
+                const startMinutes = hours * 60 + minutes;
                 const endMinutes = startMinutes + serviceDuration;
-                const endTime = bookingScheduleService.formatTime(endMinutes);
+                const endHours = Math.floor(endMinutes / 60);
+                const endMins = endMinutes % 60;
+                const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
                 
                 const slot: SelectedSlot = {
                   time: startTime,
@@ -286,6 +351,7 @@ export default function UpdateBookingScreen() {
                 };
                 setSelectedSlot(slot);
                 setOriginalSlot(slot);
+                console.log("✅ Set selected slot:", slot);
               }
             }
           }
@@ -342,6 +408,100 @@ export default function UpdateBookingScreen() {
       return null;
     }
   };
+
+  // Check service availability when branch or services change
+  useEffect(() => {
+    const checkServiceAvailability = async () => {
+      if (!selectedBranch || allPriceBookServices.length === 0) {
+        setAvailableServices(allPriceBookServices);
+        return;
+      }
+
+      setCheckingAvailability(true);
+      try {
+        // Extract Service objects from PriceBookItems
+        const servicesToCheck: Service[] = allPriceBookServices
+          .filter((item) => item.service?.service_id)
+          .map((item) => ({
+            service_id: item.service!.service_id!,
+            service_name: item.item_name,
+            service_url: "", // PriceBookItemService doesn't have service_url
+            required_skill_level: SkillLevel.BEGINNER, // Default skill level
+            service_type_id: "", // PriceBookItemService doesn't have service_type_id, use empty string
+            is_active: true,
+            is_featured: false,
+            audit: {
+              created_by: "",
+              created_date: new Date().toISOString(),
+              modified_by: "",
+              modified_date: new Date().toISOString(),
+              is_active: true,
+              is_deleted: false,
+            },
+          }));
+
+        if (servicesToCheck.length === 0) {
+          // No services with service_id, show all
+          setAvailableServices(allPriceBookServices);
+          return;
+        }
+
+        // Use enrichServicesWithInventory to check inventory
+        const servicesWithInventory = await enrichServicesWithInventory(
+          servicesToCheck,
+          selectedBranch.branch_id
+        );
+
+        // Create a Set of service IDs that passed inventory check
+        const availableServiceIds = new Set(
+          servicesWithInventory.map((s) => s.service_id)
+        );
+
+        // Filter PriceBookItems to only include services that passed inventory check
+        const filteredServices = allPriceBookServices.filter((item) => {
+          const serviceId = item.service?.service_id;
+          // If service doesn't have service_id, show it (assume it doesn't need inventory)
+          if (!serviceId) {
+            return true;
+          }
+          // Only show if service passed inventory check
+          return availableServiceIds.has(serviceId);
+        });
+
+        setAvailableServices(filteredServices);
+
+        // Clear selected items that are no longer available
+        setSelectedItems((prev) => {
+          const filtered = prev.filter((item) => {
+            const serviceId = item.service?.service_id;
+            if (!serviceId) return true;
+            return availableServiceIds.has(serviceId);
+          });
+
+          // Recalculate totals if items were removed
+          if (filtered.length !== prev.length) {
+            // Note: totalPrice and totalDuration are calculated via useMemo, so they will update automatically
+            // But we can show a snackbar to inform user
+            setSnackbar({
+              visible: true,
+              message: "Một số dịch vụ đã được loại bỏ do không đủ tồn kho",
+              error: false,
+            });
+          }
+
+          return filtered;
+        });
+      } catch (error) {
+        console.error("Error checking service availability:", error);
+        // On error, show all services to prevent blocking
+        setAvailableServices(allPriceBookServices);
+      } finally {
+        setCheckingAvailability(false);
+      }
+    };
+
+    checkServiceAvailability();
+  }, [selectedBranch, allPriceBookServices]);
 
   // Load service bays when branch changes manually by user (after initialization)
   useEffect(() => {
@@ -456,10 +616,14 @@ export default function UpdateBookingScreen() {
       // Check if we should restore the original slot
       // We restore if:
       // 1. We're on the original bay (check by comparing with booking.bay_id)
-      // 2. We're on the original date (check by comparing slot time with booking.slot_start_time)
+      // 2. We're on the original date (check by comparing slot time with scheduled_start_at)
       // 3. No slot is currently selected
       const isOriginalBay = booking?.bay_id === selectedBay.bay_id;
-      const isOriginalDate = booking?.slot_start_time === originalSlot.time;
+      // Extract time from scheduled_start_at (format: "2024-01-01T08:00:00" -> "08:00")
+      const bookingStartTime = booking?.scheduled_start_at 
+        ? new Date(booking.scheduled_start_at).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })
+        : null;
+      const isOriginalDate = bookingStartTime === originalSlot.time;
       
       if (isOriginalBay && isOriginalDate && !selectedSlot) {
         // Restore original slot if on original bay and date
@@ -486,16 +650,59 @@ export default function UpdateBookingScreen() {
     }
   }, [availableSlots, selectedSlot, selectedBay, originalSlot, bookingDate, booking]);
 
-  // Check if duration exceeds original slot duration
-  const isDurationExceedsOriginal = useMemo(() => {
-    const isSlotBooking = booking?.booking_code?.startsWith("BK") || false;
-    if (!isSlotBooking || !originalTotalDuration) return false;
+  // Calculate original slot time from scheduled_start_at and scheduled_end_at (actual time range)
+  const calculateOriginalSlotTime = useCallback(() => {
+    if (!booking) return null;
+    
+    const { isSlot: isSlotBooking } = detectBookingType(booking);
+    
+    if (!isSlotBooking) {
+      return null;
+    }
 
-    const SLOT_DURATION_MINUTES = 60;
-    const originalSlotCount = Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES);
-    const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-    return totalDuration > totalOriginalSlotTime;
-  }, [totalDuration, originalTotalDuration, booking?.booking_code]);
+    // Use actual time range from scheduled_start_at and scheduled_end_at
+    if (booking.scheduled_start_at && booking.scheduled_end_at) {
+      const startTime = new Date(booking.scheduled_start_at);
+      const endTime = new Date(booking.scheduled_end_at);
+      const diffMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      if (diffMinutes > 0) {
+        return diffMinutes;
+      }
+    }
+
+    // Fallback: use estimated_duration_minutes if available
+    if (booking.estimated_duration_minutes) {
+      return booking.estimated_duration_minutes;
+    }
+
+    // Last fallback: use originalTotalDuration
+    return originalTotalDuration || null;
+  }, [booking, originalTotalDuration]);
+
+  // Check if duration exceeds original duration (similar to web app)
+  // For slot booking: Compare with actual time range from scheduled_start_at and scheduled_end_at
+  // For walk-in booking: Compare with total duration of original services
+  const isDurationExceedsOriginal = useMemo(() => {
+    if (!booking) return false;
+    
+    // Use detectBookingType helper function for consistency
+    const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } = detectBookingType(booking);
+    
+    if (isSlotBooking) {
+      // For slot booking: Compare with actual time range from scheduled_start_at and scheduled_end_at
+      const totalOriginalSlotTime = calculateOriginalSlotTime();
+      
+      if (totalOriginalSlotTime && totalOriginalSlotTime > 0) {
+        return totalDuration > totalOriginalSlotTime;
+      }
+    } else if (isWalkInBooking) {
+      // For walk-in booking: Compare with total duration of original services
+      return totalDuration > originalTotalDuration;
+    }
+    
+    return false;
+  }, [totalDuration, originalTotalDuration, booking, calculateOriginalSlotTime]);
 
   // Check if slot is suitable
   const isSlotSuitable = useCallback(
@@ -524,24 +731,16 @@ export default function UpdateBookingScreen() {
 
   const canSelectSlot = useCallback(
     (slot: SlotInfo) => {
-      if (isDurationExceedsOriginal) return false;
+      // Note: Không còn disable slot selection khi duration exceeds - backend sẽ kiểm tra và đề xuất slot mới
       return slot.isAvailable && isSlotSuitable(slot);
     },
-    [isSlotSuitable, isDurationExceedsOriginal]
+    [isSlotSuitable]
   );
 
   // Handle slot selection
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      if (isDurationExceedsOriginal) {
-        setSnackbar({
-          visible: true,
-          message: "Không thể đổi slot khi dịch vụ vượt quá thời gian slot ban đầu",
-          error: true,
-        });
-        return;
-      }
-
+      // Note: Không còn block slot selection khi duration exceeds - backend sẽ kiểm tra và đề xuất slot mới
       if (canSelectSlot(slot)) {
         // Calculate end time
         const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
@@ -559,7 +758,7 @@ export default function UpdateBookingScreen() {
         setIsSlotChanged(true);
       }
     },
-    [canSelectSlot, totalDuration, isDurationExceedsOriginal, selectedBay?.bay_id, bookingDate]
+    [canSelectSlot, totalDuration, selectedBay?.bay_id, bookingDate]
   );
 
   // Helper function to build booking_items array for API
@@ -616,15 +815,16 @@ export default function UpdateBookingScreen() {
 
       const isNew = !originalServiceIds.has(serviceId);
       if (isNew) {
-        // ADD: New item - send service_id and item_name
+        // ADD: New item - send service_id and service_name
         const bookingItem: CreateBookingItemRequest = {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.item_name, // Use item_name from PriceBookItem as service_name
+          service_description: item.service?.description || "",
         };
         bookingItems.push(bookingItem);
         console.log("➕ Adding NEW item:", {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.item_name,
         });
       }
       // Note: UPDATE operations are not sent explicitly
@@ -643,22 +843,85 @@ export default function UpdateBookingScreen() {
       return;
     }
 
-    const isSlotBooking = booking.booking_code?.startsWith("BK") || false;
+    // Determine booking type with fallback to booking_code (similar to web app)
+    const { isWalkIn: isWalkInBooking, isSlot: isSlotBooking } = detectBookingType(booking);
+    
     if (isSlotBooking && !selectedSlot) {
       setSnackbar({ visible: true, message: "Vui lòng chọn slot cho lịch đặt slot booking", error: true });
       return;
     }
 
-    if (isDurationExceedsOriginal && originalTotalDuration) {
-      const SLOT_DURATION_MINUTES = 60;
-      const originalSlotCount = Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES);
-      const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-      setSnackbar({
-        visible: true,
-        message: `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút)`,
-        error: true,
-      });
-      return;
+    // Note: Không còn validate duration ở frontend - backend sẽ kiểm tra và thông báo nếu cần
+
+    // Validate: Check inventory for newly added services
+    // Note: We need to check inventory again here to ensure services are still available
+    // This is a safety check before submitting
+    if (selectedBranch && selectedItems.length > 0) {
+      try {
+        // Extract Service objects from selectedItems
+        const servicesToCheck: Service[] = selectedItems
+          .filter((item) => item.service?.service_id)
+          .map((item) => ({
+            service_id: item.service!.service_id!,
+            service_name: item.item_name,
+            service_url: "",
+            required_skill_level: SkillLevel.BEGINNER,
+            service_type_id: "",
+            is_active: true,
+            is_featured: false,
+            audit: {
+              created_by: "",
+              created_date: new Date().toISOString(),
+              modified_by: "",
+              modified_date: new Date().toISOString(),
+              is_active: true,
+              is_deleted: false,
+            },
+          }));
+
+        if (servicesToCheck.length > 0) {
+          const servicesWithInventory = await enrichServicesWithInventory(
+            servicesToCheck,
+            selectedBranch.branch_id
+          );
+
+          const availableServiceIds = new Set(
+            servicesWithInventory.map((s) => s.service_id)
+          );
+
+          // Check if any selected service doesn't have enough inventory
+          const servicesWithoutInventory = selectedItems.filter((item) => {
+            const serviceId = item.service?.service_id;
+            if (!serviceId) return false;
+
+            // Check if this is a new service (not in originalItems)
+            const isNewService = !originalItems.some(
+              (orig) => orig.service?.service_id === serviceId
+            );
+
+            // Only validate new services
+            if (isNewService && !availableServiceIds.has(serviceId)) {
+              return true;
+            }
+            return false;
+          });
+
+          if (servicesWithoutInventory.length > 0) {
+            const serviceNames = servicesWithoutInventory
+              .map((item) => item.item_name)
+              .join(", ");
+            setSnackbar({
+              visible: true,
+              message: `Các dịch vụ sau không đủ tồn kho trong chi nhánh ${selectedBranch.branch_name}: ${serviceNames}. Vui lòng chọn dịch vụ khác.`,
+              error: true,
+            });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error validating inventory before submit:", error);
+        // Continue with submission if validation fails (backend will handle it)
+      }
     }
 
     setSubmitting(true);
@@ -670,55 +933,56 @@ export default function UpdateBookingScreen() {
       // Build booking_items array for API
       const bookingItems = buildBookingItemsArray();
       
-      // For slot booking, backend will calculate scheduled_start_at and scheduled_end_at from slot_date and slot_start_time
-      // So we should NOT send scheduled_start_at and scheduled_end_at when we have slot_date and slot_start_time
+      // For schedule booking, backend will calculate scheduled_start_at and scheduled_end_at from schedule_date and schedule_start_time
+      // So we should NOT send scheduled_start_at and scheduled_end_at when we have schedule_date and schedule_start_time
       // to avoid timezone issues and let backend handle the calculation correctly
-      const updateRequest: any = {
+      const updateRequest: UpdateBookingRequest = {
         vehicle_license_plate: selectedVehicle.license_plate,
         vehicle_brand_name: selectedVehicle.brand_name || "",
         vehicle_model_name: selectedVehicle.model_name || "",
         vehicle_type_name: selectedVehicle.type_name || "",
-        branch_id: selectedBranch.branch_id,
-        service_bay_id: selectedSlot && selectedBay ? selectedBay.bay_id : undefined,
         estimated_duration_minutes: totalDuration,
-        buffer_minutes: 15,
         total_price: totalPrice,
         currency: "VND",
         notes: notes || "",
       };
+
+      // Handle branch_id based on booking type (similar to web app)
+      // For walk-in booking, don't send branch_id as it cannot be changed
+      // For slot booking, always send branch_id
+      if (!isWalkInBooking) {
+        updateRequest.branch_id = selectedBranch.branch_id;
+      }
+
+      // Handle service_bay_id based on booking type (similar to web app)
+      if (isSlotBooking && selectedSlot && selectedBay) {
+        // For slot booking, always send service_bay_id if slot is selected
+        updateRequest.service_bay_id = selectedBay.bay_id;
+      } else if (isWalkInBooking) {
+        // For walk-in booking, only set service_bay_id if it's different from original
+        // Note: We don't have selectedWalkInBay state in mobile, so we'll skip this for now
+        // If needed, we can add it later
+      }
 
       // Add booking_items array if it has items
       if (bookingItems.length > 0) {
         updateRequest.booking_items = bookingItems;
       }
 
-      // For slot booking, send slot_date and slot_start_time - backend will calculate dates correctly
-      if (selectedSlot && isSlotBooking) {
-        updateRequest.slot_date = dateStr;
-        updateRequest.slot_start_time = selectedSlot.time;
-        
-        // Use local time format (YYYY-MM-DDTHH:mm:ss) instead of ISO to avoid timezone issues
-        const [startHour, startMinute] = selectedSlot.time.split(":").map(Number);
-        const startLocal = new Date(
-          bookingDate.getFullYear(),
-          bookingDate.getMonth(),
-          bookingDate.getDate(),
-          startHour || 0,
-          startMinute || 0,
-          0,
-          0
-        );
-        const durationMs = selectedSlot.serviceDurationMinutes * 60 * 1000;
-        const endLocal = new Date(startLocal.getTime() + durationMs);
-        const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-        const slotStartLocal = `${startLocal.getFullYear()}-${pad(startLocal.getMonth() + 1)}-${pad(startLocal.getDate())}T${pad(startLocal.getHours())}:${pad(startLocal.getMinutes())}:${pad(startLocal.getSeconds())}`;
-        const slotEndLocal = `${endLocal.getFullYear()}-${pad(endLocal.getMonth() + 1)}-${pad(endLocal.getDate())}T${pad(endLocal.getHours())}:${pad(endLocal.getMinutes())}:${pad(endLocal.getSeconds())}`;
-        
-        updateRequest.scheduled_start_at = slotStartLocal;
-        updateRequest.scheduled_end_at = slotEndLocal;
+      // Handle schedule information based on booking type (similar to web app)
+      if (isSlotBooking && selectedSlot) {
+        // For slot booking, send schedule_date and schedule_start_time - backend will calculate dates correctly
+        updateRequest.schedule_date = dateStr; // YYYY-MM-DD format
+        updateRequest.schedule_start_time = selectedSlot.time; // HH:mm format
+        // DO NOT send scheduled_start_at and scheduled_end_at - backend will calculate from schedule_date and schedule_start_time
+      } else if (isWalkInBooking) {
+        // For walk-in booking, we don't set scheduled times or slot info
+        // Backend will handle walk-in booking scheduling automatically
+        // DO NOT send scheduled_start_at, scheduled_end_at, schedule_date, or schedule_start_time
       } else {
-        // For non-slot booking, send scheduled times directly
-        updateRequest.scheduled_start_at = bookingDate.toISOString();
+        // For other booking types (fallback), send scheduled times directly if needed
+        // This should rarely happen, but we keep it for safety
+        // updateRequest.scheduled_start_at = bookingDate.toISOString();
       }
 
       await bookingService.updateBooking(bookingId, updateRequest);
@@ -727,7 +991,14 @@ export default function UpdateBookingScreen() {
         router.back();
       }, 1500);
     } catch (e: any) {
-      setSnackbar({ visible: true, message: e?.message || "Cập nhật booking thất bại", error: true });
+      // Extract error message from backend response
+      const errorMessage = 
+        e?.response?.data?.message || 
+        e?.response?.data?.error || 
+        e?.message || 
+        "Cập nhật booking thất bại";
+      
+      setSnackbar({ visible: true, message: errorMessage, error: true });
     } finally {
       setSubmitting(false);
     }
@@ -774,7 +1045,8 @@ export default function UpdateBookingScreen() {
   );
 }
 
-  const isSlotBooking = booking.booking_code?.startsWith("BK") || false;
+  // Use detectBookingType helper function for consistency
+  const { isSlot: isSlotBooking } = detectBookingType(booking);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>
@@ -916,6 +1188,36 @@ export default function UpdateBookingScreen() {
                 style={{ paddingHorizontal: 0 }}
               />
             </View>
+
+            {/* Time Display (for walk-in bookings) */}
+            {!isSlotBooking && booking?.scheduled_start_at && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Thời gian dự kiến</Text>
+                <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                  {(() => {
+                    const scheduledStart = new Date(booking.scheduled_start_at);
+                    const hours = scheduledStart.getHours();
+                    const minutes = scheduledStart.getMinutes();
+                    const startTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+                    const duration = booking.estimated_duration_minutes || 60;
+                    const endMinutes = hours * 60 + minutes + duration;
+                    const endHours = Math.floor(endMinutes / 60);
+                    const endMins = endMinutes % 60;
+                    const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                    return (
+                      <>
+                        <Text style={{ fontWeight: "600" }}>
+                          {startTime} - {endTime}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                          {duration} phút
+                        </Text>
+                      </>
+                    );
+                  })()}
+                </View>
+              </View>
+            )}
           </Card.Content>
         </Card>
 
@@ -955,13 +1257,37 @@ export default function UpdateBookingScreen() {
                 ))}
               </View>
             )}
-            {isDurationExceedsOriginal && isSlotBooking && (
-              <View style={{ marginTop: 12, padding: 12, backgroundColor: "#FFEBEE", borderRadius: 8 }}>
-                <Text style={{ color: "#d32f2f", fontSize: 12 }}>
-                  ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các slot đã đặt ban đầu. Vui lòng chọn lại dịch vụ.
-                </Text>
-              </View>
-            )}
+            {(() => {
+              const { isSlot: isSlotBookingType } = detectBookingType(booking);
+              if (!isSlotBookingType || !isDurationExceedsOriginal) return null;
+              
+              // Check if services changed
+              const isServicesChanged =
+                JSON.stringify(selectedItems.map((item) => item.item_id).sort()) !==
+                JSON.stringify(originalItems.map((item) => item.item_id).sort());
+              
+              if (!isServicesChanged) return null;
+              
+              const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+              if (totalOriginalSlotTime <= 0) return null;
+              
+              return (
+                <View style={{ marginTop: 12, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                  <Text style={{ color: "#D46B08", fontSize: 12, fontWeight: "600", marginBottom: 4 }}>
+                    Thông báo về thời gian dịch vụ
+                  </Text>
+                  <Text style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}>
+                    Tổng thời gian dịch vụ bạn đã chọn: <Text style={{ fontWeight: "600" }}>{totalDuration} phút</Text>
+                  </Text>
+                  <Text style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}>
+                    Tổng thời gian slot đã đặt ban đầu: <Text style={{ fontWeight: "600" }}>{totalOriginalSlotTime} phút</Text>
+                  </Text>
+                  <Text style={{ color: "#D46B08", fontSize: 12 }}>
+                    ⚠️ Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                  </Text>
+                </View>
+              );
+            })()}
             <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
               <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
                 <Text style={{ color: "#52c41a", fontSize: 18, fontWeight: "600" }}>
@@ -982,26 +1308,26 @@ export default function UpdateBookingScreen() {
         {/* Bay and Slot Selection */}
         {isSlotBooking && selectedBranch && bookingDate && (
           <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-            <Card.Title title="Khu vực chăm sóc và thời gian" />
+            <Card.Title title=" và thời gian" />
             <Divider />
             <Card.Content>
               {/* Bay Selection */}
               <View style={{ marginTop: 12 }}>
                 <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Khu vực dịch vụ</Text>
-                {isDurationExceedsOriginal && (
-                  <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFEBEE", borderRadius: 8 }}>
-                    <Text style={{ color: "#d32f2f", fontSize: 12 }}>
-                      Không thể đổi slot khi dịch vụ vượt quá thời gian slot ban đầu
-                    </Text>
-                  </View>
-                )}
-                {totalDuration > 60 && !isDurationExceedsOriginal && (
-                  <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#E3F2FD", borderRadius: 8 }}>
-                    <Text style={{ fontSize: 12 }}>
-                      Dịch vụ yêu cầu {Math.ceil(totalDuration / 60)} slot liên tiếp ({totalDuration} phút)
-                    </Text>
-                  </View>
-                )}
+                {(() => {
+                  if (!isDurationExceedsOriginal) return null;
+                  
+                  const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+                  if (totalOriginalSlotTime <= 0) return null;
+                  
+                  return (
+                    <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                      <Text style={{ color: "#D46B08", fontSize: 12 }}>
+                        Lưu ý: Tổng thời gian dịch vụ bạn đã chọn ({totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu ({totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                      </Text>
+                    </View>
+                  );
+                })()}
                 {totalDuration <= 0 && (
                   <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
                     <Text style={{ fontSize: 12, color: "#faad14" }}>
@@ -1117,7 +1443,7 @@ export default function UpdateBookingScreen() {
                     </ScrollView>
                   ) : (
                     <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
-                      <Text style={{ fontSize: 12 }}>Không có slot khả dụng</Text>
+                      <Text style={{ fontSize: 12 }}>Không có thời gian khả dụng</Text>
                     </View>
                   )}
 
@@ -1131,10 +1457,10 @@ export default function UpdateBookingScreen() {
                       }}
                     >
                       <Text style={{ fontWeight: "600" }}>
-                        Slot đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
+                        Thời gian đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
                       </Text>
                       <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                        Service Bay: {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
+                        : {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
                       </Text>
                       {isSlotChanged && (
                         <Button
@@ -1150,7 +1476,7 @@ export default function UpdateBookingScreen() {
                           }}
                           style={{ marginTop: 8 }}
                         >
-                          Hủy chọn slot
+                          Hủy chọn thời gian
                         </Button>
                       )}
                     </View>
@@ -1189,8 +1515,8 @@ export default function UpdateBookingScreen() {
             !selectedBranch ||
             selectedItems.length === 0 ||
             !selectedVehicle ||
-            (isSlotBooking && !selectedSlot) ||
-            isDurationExceedsOriginal
+            (isSlotBooking && !selectedSlot)
+            // Note: Không disable khi duration exceeds original - backend sẽ kiểm tra và đề xuất slot mới
           }
           contentStyle={{ paddingVertical: 8 }}
           style={{ marginTop: 8 }}
@@ -1286,9 +1612,38 @@ export default function UpdateBookingScreen() {
         >
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#e0e0e0" }}>
             <Text style={{ fontSize: 18, fontWeight: "600" }}>Chọn dịch vụ</Text>
+            {checkingAvailability && selectedBranch && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+                <ActivityIndicator size="small" style={{ marginRight: 8 }} />
+                <Text style={{ fontSize: 12, color: "#666" }}>Đang kiểm tra tồn kho...</Text>
+              </View>
+            )}
+            {!checkingAvailability &&
+              selectedBranch &&
+              availableServices.length === 0 &&
+              allPriceBookServices.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 8,
+                    padding: 12,
+                    backgroundColor: "#FFF7E6",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: "#D46B08" }}>
+                    Không có dịch vụ nào khả dụng trong chi nhánh này. Tất cả dịch vụ đều không đủ tồn kho.
+                  </Text>
+                </View>
+              )}
           </View>
-          <FlatList
-            data={availableServices}
+          {checkingAvailability ? (
+            <View style={{ padding: 40, alignItems: "center" }}>
+              <ActivityIndicator />
+              <Text style={{ marginTop: 12, fontSize: 14, color: "#666" }}>Đang kiểm tra tồn kho...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={availableServices}
             keyExtractor={(item) => item.item_id}
             renderItem={({ item }) => {
               const isSelected = selectedItems.some((i) => i.item_id === item.item_id);
@@ -1327,7 +1682,17 @@ export default function UpdateBookingScreen() {
                 </TouchableOpacity>
               );
             }}
+            ListEmptyComponent={
+              <View style={{ padding: 40, alignItems: "center" }}>
+                <Text style={{ fontSize: 14, color: "#999" }}>
+                  {selectedBranch
+                    ? "Không có dịch vụ nào khả dụng trong chi nhánh này"
+                    : "Vui lòng chọn chi nhánh trước"}
+                </Text>
+              </View>
+            }
           />
+          )}
           <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: "#e0e0e0" }}>
             <Button mode="contained" onPress={() => setServiceModal(false)}>
               Xong

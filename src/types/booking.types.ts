@@ -38,13 +38,6 @@ export interface BookingInfoDto {
   bay_name?: string;
   bay_type?: string;
   
-  // Slot information
-  slot_id?: string;
-  slot_start_time?: string;
-  slot_end_time?: string;
-  slot_duration_minutes?: number;
-  slot_status?: string;
-  
   // Scheduling information
   preferred_start_at?: string;
   scheduled_start_at?: string;
@@ -55,23 +48,18 @@ export interface BookingInfoDto {
   
   // Duration information
   estimated_duration_minutes?: number;
-  buffer_minutes?: number;
   actual_duration_minutes?: number;
   
   // Pricing information
   total_price?: number;
   currency?: string;
-  deposit_amount?: number;
   
   // Status information
   payment_status?: PaymentStatus;
   status: BookingStatus;
-  priority?: Priority;
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
   
   // Cancellation information
   cancellation_reason?: string;
@@ -86,8 +74,6 @@ export interface BookingInfoDto {
   
   // Related data
   booking_items?: BookingItemInfoDto[];
-  assignments?: BookingAssignmentInfoDto[];
-  payments?: BookingPaymentInfoDto[];
   
   // Computed fields
   is_active?: boolean;
@@ -116,11 +102,6 @@ export enum PaymentStatus {
   REFUNDED = "REFUNDED"
 }
 
-export enum Priority {
-  NORMAL = "NORMAL",
-  HIGH = "HIGH", 
-  URGENT = "URGENT"
-}
 
 export interface BookingFilterParam {
   page?: number;
@@ -138,31 +119,13 @@ export interface BookingFilterParam {
 // Related DTOs
 export interface BookingItemInfoDto {
   service_id?: string;
-  item_name: string;
-  item_description?: string;
-  discount_amount?: number;
-  tax_amount?: number;
+  service_name: string;
+  service_description?: string;
   unit_price?: number;
-  quantity?: number;
+  duration_minutes?: number;
+  item_status?: string;
 }
 
-export interface BookingAssignmentInfoDto {
-  assignmentId: string;
-  technicianId: string;
-  technicianName: string;
-  technicianCode: string;
-  role: string;
-  assignedAt: string;
-}
-
-export interface BookingPaymentInfoDto {
-  paymentId: string;
-  amount: number;
-  paymentMethod: string;
-  paymentStatus: PaymentStatus;
-  paidAt?: string;
-  notes?: string;
-}
 
 export interface CreateBookingRequest {
   customer_id: string;
@@ -213,7 +176,8 @@ export interface CreateBookingRequest {
 }
 
 // New integrated booking request type based on BookingInfoDto
-export interface CreateBookingWithSlotRequest {
+// Backend automatically sets bookingType = SCHEDULED
+export interface CreateBookingWithScheduleRequest {
   // Customer information
   customer_id?: string;
   customer_name: string;
@@ -229,7 +193,7 @@ export interface CreateBookingWithSlotRequest {
   vehicle_year?: number;
   vehicle_color?: string;
   
-  // Branch and slot information
+  // Branch information
   branch_id: string;
   
   // Selected schedule information
@@ -250,21 +214,19 @@ export interface CreateBookingWithSlotRequest {
   // Pricing information
   total_price: number;
   currency?: string;
-  deposit_amount?: number;
+  
+  // Duration information
+  estimated_duration_minutes?: number;
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
 }
 
 // Request item for booking_items array in update booking
 export interface CreateBookingItemRequest {
-  service_id?: string; // UUID, optional - ID của service
-  item_name?: string; // String, optional - Tên item
-  item_description?: string; // String, optional - Mô tả item
-  discount_amount?: number; // BigDecimal, optional - Số tiền chiết khấu
-  tax_amount?: number; // BigDecimal, optional - Số tiền thuế
+  service_id?: string; // UUID, required - ID của service
+  service_name?: string; // String, required - Tên service
+  service_description?: string; // String, optional - Mô tả service
   operation?: "DELETE"; // String enum, optional - Operation type - chỉ có giá trị "DELETE"
 }
 
@@ -291,28 +253,23 @@ export interface UpdateBookingRequest {
   scheduled_start_at?: string;
   scheduled_end_at?: string;
   
-  // Slot information
-  slot_date?: string;
-  slot_start_time?: string;
+  // Schedule information (used to calculate scheduledStartAt/scheduledEndAt if not provided directly)
+  schedule_date?: string; // YYYY-MM-DD format
+  schedule_start_time?: string; // HH:mm format
   
   // Duration information
   estimated_duration_minutes?: number;
-  buffer_minutes?: number;
   
   // Pricing information
   total_price?: number;
   currency?: string;
-  deposit_amount?: number;
   
   // Status information
   payment_status?: PaymentStatus;
   status?: BookingStatus;
-  priority?: Priority;
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
   
   // Booking items - Array of items to add/update/delete
   booking_items?: CreateBookingItemRequest[];
