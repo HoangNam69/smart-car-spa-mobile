@@ -81,4 +81,23 @@ export const bookingService = {
       throw new Error(api?.message || "Hủy booking thất bại");
     return api.data as BookingInfoDto;
   },
+
+  /**
+   * Get bookings for management (CHECKED_IN, IN_PROGRESS, CANCELLED, COMPLETED)
+   * Optimized API to get all bookings needed for vehicle care management in one call
+   * Returns bookings sorted by scheduledStartAt DESC
+   */
+  async getBookingsForManagement(): Promise<BookingInfoDto[]> {
+    try {
+      const res = await axiosInstance.get("/bookings/management");
+      const api = res.data;
+      if (api?.success && api?.data) {
+        return api.data as BookingInfoDto[];
+      }
+      return [];
+    } catch (error) {
+      console.error("Get bookings for management error:", error);
+      return [];
+    }
+  },
 };
