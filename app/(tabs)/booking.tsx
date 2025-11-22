@@ -132,7 +132,7 @@ export default function BookingScreen() {
         const rangeEnd = bookingScheduleService.parseTime(range.end_time);
         // Slot is suitable if it starts within range and ends before or at range ends
         // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
-        // We allow a small tolerance (1 minute) for rounding differences
+        // Allow a small tolerance (1 minute) for rounding differences
         const TOLERANCE_MINUTES = 1;
         return slotStartMinutes >= rangeStart && slotEndMinutes <= (rangeEnd + TOLERANCE_MINUTES);
       });
@@ -218,7 +218,7 @@ export default function BookingScreen() {
     loadInit();
   }, [loadInit]);
 
-  // Reload screen data whenever the tab/screen gains focus
+  // Reload screen data whenever the tab gains focus
   useFocusEffect(
     useCallback(() => {
       loadInit();
@@ -264,9 +264,9 @@ export default function BookingScreen() {
           .map((item) => ({
             service_id: item.service!.service_id!,
             service_name: item.item_name,
-            service_url: "", // PriceBookItemService doesn't have service_url
-            required_skill_level: SkillLevel.BEGINNER, // Default skill level
-            service_type_id: "", // PriceBookItemService doesn't have service_type_id, use empty string
+            service_url: "",
+            required_skill_level: SkillLevel.BEGINNER,
+            service_type_id: "",
             is_active: true,
             is_featured: false,
             audit: {

@@ -1,11 +1,11 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 import { Alert } from "react-native";
 import axiosInstance from "../config/axiosConfig";
 
@@ -48,7 +48,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   // Load cart from AsyncStorage on mount
   useEffect(() => {
-    console.log("🛒 [CartContext] Initializing...");
+    console.log(" [CartContext] Initializing...");
     loadCart();
   }, []);
 
@@ -68,20 +68,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   const loadCart = async () => {
     try {
-      console.log("🛒 [CartContext] Loading cart from storage...");
+      console.log(" [CartContext] Loading cart from storage...");
       const savedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
       if (savedCart) {
         const parsedCart = JSON.parse(savedCart);
         setCart(parsedCart);
-        console.log("✅ [CartContext] Cart loaded:", parsedCart.length, "items");
+        console.log(" [CartContext] Cart loaded:", parsedCart.length, "items");
       } else {
-        console.log("ℹ️ [CartContext] No saved cart found");
+        console.log(" [CartContext] No saved cart found");
       }
     } catch (error) {
-      console.error("❌ [CartContext] Error loading cart:", error);
+      console.error(" [CartContext] Error loading cart:", error);
     } finally {
       setIsLoading(false);
-      console.log("✅ [CartContext] Initialization complete");
+      console.log(" [CartContext] Initialization complete");
     }
   };
 

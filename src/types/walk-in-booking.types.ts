@@ -389,7 +389,7 @@ export const PRIORITY_LEVELS = [
  */
 export const CUSTOMER_TYPES = [
   { value: 'EXISTING', label: 'Khách hàng có sẵn', icon: '👤' },
-  { value: 'NEW', label: 'Khách hàng mới', icon: '➕' },
+  { value: 'NEW', label: 'Khách hàng mới', icon: '' },
 ] as const;
 
 /**

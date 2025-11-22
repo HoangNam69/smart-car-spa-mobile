@@ -4,7 +4,8 @@ import { FlatList, RefreshControl, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator, Badge, Card, Chip, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
-import { bookingService, type BookingInfoDto } from "../../../src/services/booking.service";
+import { bookingService } from "../../../src/services/booking.service";
+import { BookingInfoDto } from "../../../src/types/booking.types";
 
 export default function CareHistoryScreen() {
   const { user } = useAuth();
@@ -91,7 +92,7 @@ export default function CareHistoryScreen() {
       <Card style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}>
         <Card.Title
           title={item.booking_code}
-          subtitle={`${new Date(item.scheduled_start_at).toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
+          subtitle={`${new Date(item.scheduled_start_at || "").toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
           right={() => (
             <Badge size={10} style={{ backgroundColor: statusToColor(item.status), marginRight: 16 }} />
           )}

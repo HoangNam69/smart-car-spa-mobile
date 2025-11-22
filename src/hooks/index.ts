@@ -20,6 +20,14 @@ export {
   useServiceMainImage,
 } from "./useServices";
 
+// WebSocket hooks
+export {
+  useBookingReload,
+  useVehicleProfileReload,
+  useCustomerReload,
+  useWebSocketStatus,
+} from "./useWebSocket";
+
 // Re-export types
 export type {
   ApiResponse,

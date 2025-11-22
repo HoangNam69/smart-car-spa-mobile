@@ -1,19 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { View, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { usePricing, usePublicProducts } from "@/src/hooks";
+import React, { useEffect, useMemo, useState } from "react";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import {
-  Searchbar,
   ActivityIndicator,
-  Text,
-  FAB,
   Chip,
-  Badge,
+  FAB,
+  Searchbar,
+  Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { usePublicProducts } from "@/src/hooks";
-import { usePricing } from "@/src/hooks";
-import ProductCard from "@/components/products/ProductCard";
+
 import FilterModal from "@/components/products/FilterModal";
-import { useRouter, Stack } from "expo-router";
+import ProductCard from "@/components/products/ProductCard";
+import { Stack, useRouter } from "expo-router";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -50,7 +49,7 @@ export default function ProductsPage() {
         const result = await previewBatch({ items });
 
         const newPricingMap: Record<string, number> = {};
-        result.items?.forEach((item) => {
+        result.items?.forEach((item: any) => {
           newPricingMap[item.product_id] = item.total_price / item.qty;
         });
 

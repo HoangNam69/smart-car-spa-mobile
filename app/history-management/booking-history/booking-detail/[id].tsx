@@ -265,7 +265,7 @@ export default function BookingDetailScreen() {
                     ) : null}
                     {item.unit_price ? (
                       <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
-                        {safeString(`Giá: ${(item.unit_price || 0).toLocaleString()} VNĐ${item.quantity && item.quantity > 1 ? ` × ${item.quantity}` : ""}`)}
+                        {safeString(`Giá: ${(item.unit_price || 0).toLocaleString()} VNĐ`)}
                       </Text>
                     ) : null}
                   </View>

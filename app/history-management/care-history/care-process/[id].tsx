@@ -2,17 +2,17 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import {
-    ActivityIndicator,
-    Card,
-    Chip,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Card,
+  Chip,
+  Text,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { bookingService } from "../../../../src/services/booking.service";
 import {
-    serviceProcessTrackingService,
-    type ServiceProcessTrackingInfoDto,
+  serviceProcessTrackingService,
+  type ServiceProcessTrackingInfoDto,
 } from "../../../../src/services/serviceProcessTracking.service";
 
 interface ServiceWithTrackings {
@@ -47,7 +47,7 @@ export default function CareProcessScreen() {
         for (const bookingItem of bookingData.booking_items) {
           if (bookingItem.service_id) {
             const serviceId = bookingItem.service_id;
-            const serviceName = bookingItem.item_name || "Dịch vụ chưa có tên";
+            const serviceName = bookingItem.service_name || "Dịch vụ chưa có tên";
 
             if (!serviceMap.has(serviceId)) {
               serviceMap.set(serviceId, {

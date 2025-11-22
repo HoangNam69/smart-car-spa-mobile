@@ -1,36 +1,36 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from "react-native";
-import {
-  Text,
-  Button,
-  Card,
-  TextInput,
-  Divider,
-  RadioButton,
-  Chip,
-} from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { useCart } from "@/src/context/CartContext";
+import PromotionModal from "@/components/promotions/PromotionModal";
 import { useAuth } from "@/src/context/AuthContext";
+import { useCart } from "@/src/context/CartContext";
+import { useBranches } from "@/src/hooks/useBranches";
 import { useCreateAndPay } from "@/src/hooks/usePayment";
 import { useActivePromotions } from "@/src/hooks/usePromotions";
-import { useBranches } from "@/src/hooks/useBranches";
-import { Promotion } from "@/src/services/promotionService";
 import { Branch } from "@/src/services/branchService";
 import { catalogService } from "@/src/services/catalogService";
-import PromotionModal from "@/components/promotions/PromotionModal";
+import { Promotion } from "@/src/services/promotionService";
 import {
   calculateTotalDiscounts,
   isPromotionApplicable,
 } from "@/src/utils/promotionCalculator";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  Button,
+  Card,
+  Chip,
+  Divider,
+  RadioButton,
+  Text,
+  TextInput,
+} from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -86,21 +86,19 @@ export default function CheckoutPage() {
       // Reset selected branch when dependencies change
       if (selectedBranch) return; // Already selected, don't recheck
 
-      console.log("🔍 Checking inventory across branches...");
+      console.log("Checking inventory across branches...");
 
       try {
         // Check each branch's catalog to find one with sufficient stock
         for (const branch of branches) {
           try {
-            console.log(`📦 Checking branch: ${branch.branch_name}`);
+            console.log(`Checking branch: ${branch.branch_name}`);
             const catalog = await catalogService.getForSaleCatalogs(
               branch.branch_id
             );
 
             if (!catalog?.items) {
-              console.log(
-                `  ⚠️ No catalog items for branch ${branch.branch_name}`
-              );
+              console.log(`No catalog items for branch ${branch.branch_name}`);
               continue;
             }
 
@@ -113,10 +111,7 @@ export default function CheckoutPage() {
               );
             }
 
-            console.log(
-              `  📊 Inventory map:`,
-              Object.fromEntries(inventoryMap)
-            );
+            console.log(`Inventory map:`, Object.fromEntries(inventoryMap));
 
             // Check if this branch has enough stock for all cart items
             let hasAllStock = true;
@@ -127,7 +122,7 @@ export default function CheckoutPage() {
               const needed = cartItem.quantity;
 
               console.log(
-                `  🛒 ${
+                `   ${
                   cartItem.product.product_name
                 }: need ${needed}, available ${availableStock || 0}`
               );
@@ -139,30 +134,25 @@ export default function CheckoutPage() {
             }
 
             if (hasAllStock) {
-              console.log(`  ✅ Branch ${branch.branch_name} has all items!`);
+              console.log(`   Branch ${branch.branch_name} has all items!`);
               setSelectedBranch(branch);
               return; // Found a suitable branch, stop searching
             } else {
-              console.log(
-                `  ❌ Branch ${branch.branch_name} missing some items`
-              );
+              console.log(`   Branch ${branch.branch_name} missing some items`);
             }
           } catch (error) {
-            console.error(
-              `❌ Error checking branch ${branch.branch_id}:`,
-              error
-            );
+            console.error(` Error checking branch ${branch.branch_id}:`, error);
             continue;
           }
         }
 
         // No branch has all items in stock - select first branch as fallback
-        console.log("⚠️ No branch has all items, using fallback");
+        console.log(" No branch has all items, using fallback");
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
         }
       } catch (error) {
-        console.error("❌ Error checking inventory:", error);
+        console.error(" Error checking inventory:", error);
         // Fallback to first branch
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
@@ -308,10 +298,10 @@ export default function CheckoutPage() {
         payment_method: paymentMethod,
       };
 
-      console.log("📦 Order payload:", orderPayload);
+      console.log(" Order payload:", orderPayload);
 
       const result = await createAndPay(orderPayload);
-      console.log("✅ Order created:", result);
+      console.log(" Order created:", result);
 
       // Clear cart
       clearCart();
@@ -319,7 +309,7 @@ export default function CheckoutPage() {
       // Navigate to success page
       router.push("/checkout/success" as any);
     } catch (error) {
-      console.error("❌ Checkout error:", error);
+      console.error(" Checkout error:", error);
       Alert.alert("Lỗi", "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.");
     }
   };
@@ -329,10 +319,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -342,15 +329,9 @@ export default function CheckoutPage() {
           showsVerticalScrollIndicator={false}
         >
           {/* Customer Info Section */}
-          <Card
-            style={styles.section}
-            mode="elevated"
-          >
+          <Card style={styles.section} mode="elevated">
             <Card.Content>
-              <Text
-                variant="titleLarge"
-                style={styles.sectionTitle}
-              >
+              <Text variant="titleLarge" style={styles.sectionTitle}>
                 Thông tin khách hàng
               </Text>
 
@@ -409,16 +390,10 @@ export default function CheckoutPage() {
           </Card>
 
           {/* Promotion Section */}
-          <Card
-            style={styles.section}
-            mode="elevated"
-          >
+          <Card style={styles.section} mode="elevated">
             <Card.Content>
               <View style={styles.promotionHeader}>
-                <Text
-                  variant="titleLarge"
-                  style={styles.sectionTitle}
-                >
+                <Text variant="titleLarge" style={styles.sectionTitle}>
                   Khuyến mãi
                 </Text>
                 <Button
@@ -449,10 +424,7 @@ export default function CheckoutPage() {
                   ))}
                 </View>
               ) : (
-                <Text
-                  variant="bodySmall"
-                  style={styles.noPromotionText}
-                >
+                <Text variant="bodySmall" style={styles.noPromotionText}>
                   Chưa áp dụng khuyến mãi nào
                 </Text>
               )}
@@ -460,15 +432,9 @@ export default function CheckoutPage() {
           </Card>
 
           {/* Payment Method Section */}
-          <Card
-            style={styles.section}
-            mode="elevated"
-          >
+          <Card style={styles.section} mode="elevated">
             <Card.Content>
-              <Text
-                variant="titleLarge"
-                style={styles.sectionTitle}
-              >
+              <Text variant="titleLarge" style={styles.sectionTitle}>
                 Phương thức thanh toán
               </Text>
 
@@ -484,10 +450,7 @@ export default function CheckoutPage() {
                     <Text variant="bodyLarge">
                       Thanh toán khi nhận hàng (COD)
                     </Text>
-                    <Text
-                      variant="bodySmall"
-                      style={styles.radioDescription}
-                    >
+                    <Text variant="bodySmall" style={styles.radioDescription}>
                       Thanh toán bằng tiền mặt khi nhận hàng
                     </Text>
                   </View>
@@ -497,10 +460,7 @@ export default function CheckoutPage() {
                   <RadioButton value="BANK" />
                   <View style={styles.radioLabel}>
                     <Text variant="bodyLarge">Chuyển khoản ngân hàng</Text>
-                    <Text
-                      variant="bodySmall"
-                      style={styles.radioDescription}
-                    >
+                    <Text variant="bodySmall" style={styles.radioDescription}>
                       Chuyển khoản trước khi nhận hàng
                     </Text>
                   </View>
@@ -510,34 +470,22 @@ export default function CheckoutPage() {
           </Card>
 
           {/* Order Summary */}
-          <Card
-            style={styles.section}
-            mode="elevated"
-          >
+          <Card style={styles.section} mode="elevated">
             <Card.Content>
-              <Text
-                variant="titleLarge"
-                style={styles.sectionTitle}
-              >
+              <Text variant="titleLarge" style={styles.sectionTitle}>
                 Tổng quan đơn hàng
               </Text>
 
               <View style={styles.summaryRow}>
                 <Text variant="bodyLarge">Số sản phẩm:</Text>
-                <Text
-                  variant="bodyLarge"
-                  style={styles.summaryValue}
-                >
+                <Text variant="bodyLarge" style={styles.summaryValue}>
                   {cartSummary.itemCount} sản phẩm
                 </Text>
               </View>
 
               <View style={styles.summaryRow}>
                 <Text variant="bodyLarge">Tạm tính:</Text>
-                <Text
-                  variant="bodyLarge"
-                  style={styles.summaryValue}
-                >
+                <Text variant="bodyLarge" style={styles.summaryValue}>
                   {cartSummary.subtotal.toLocaleString("vi-VN")}đ
                 </Text>
               </View>
@@ -545,10 +493,7 @@ export default function CheckoutPage() {
               {cartSummary.totalDiscount > 0 && (
                 <View style={styles.summaryRow}>
                   <Text variant="bodyLarge">Giảm giá:</Text>
-                  <Text
-                    variant="bodyLarge"
-                    style={styles.discountValue}
-                  >
+                  <Text variant="bodyLarge" style={styles.discountValue}>
                     -{cartSummary.totalDiscount.toLocaleString("vi-VN")}đ
                   </Text>
                 </View>
@@ -556,10 +501,7 @@ export default function CheckoutPage() {
 
               <View style={styles.summaryRow}>
                 <Text variant="bodyLarge">Phí vận chuyển:</Text>
-                <Text
-                  variant="bodyLarge"
-                  style={styles.freeShipping}
-                >
+                <Text variant="bodyLarge" style={styles.freeShipping}>
                   Miễn phí
                 </Text>
               </View>
@@ -567,25 +509,16 @@ export default function CheckoutPage() {
               <Divider style={styles.divider} />
 
               <View style={styles.summaryRow}>
-                <Text
-                  variant="titleLarge"
-                  style={styles.totalLabel}
-                >
+                <Text variant="titleLarge" style={styles.totalLabel}>
                   Tổng cộng:
                 </Text>
-                <Text
-                  variant="headlineSmall"
-                  style={styles.total}
-                >
+                <Text variant="headlineSmall" style={styles.total}>
                   {cartSummary.totalAmount.toLocaleString("vi-VN")}đ
                 </Text>
               </View>
 
               {cartSummary.totalDiscount > 0 && (
-                <Text
-                  variant="bodySmall"
-                  style={styles.savingsText}
-                >
+                <Text variant="bodySmall" style={styles.savingsText}>
                   Bạn đã tiết kiệm được{" "}
                   {cartSummary.totalDiscount.toLocaleString("vi-VN")}đ
                 </Text>
@@ -594,15 +527,9 @@ export default function CheckoutPage() {
           </Card>
 
           {/* Product List */}
-          <Card
-            style={styles.section}
-            mode="elevated"
-          >
+          <Card style={styles.section} mode="elevated">
             <Card.Content>
-              <Text
-                variant="titleMedium"
-                style={styles.sectionTitle}
-              >
+              <Text variant="titleMedium" style={styles.sectionTitle}>
                 Sản phẩm ({cart.length})
               </Text>
 
@@ -618,17 +545,11 @@ export default function CheckoutPage() {
                       >
                         {item.product.product_name}
                       </Text>
-                      <Text
-                        variant="bodySmall"
-                        style={styles.productQuantity}
-                      >
+                      <Text variant="bodySmall" style={styles.productQuantity}>
                         Số lượng: {item.quantity}
                       </Text>
                     </View>
-                    <Text
-                      variant="bodyLarge"
-                      style={styles.productPrice}
-                    >
+                    <Text variant="bodyLarge" style={styles.productPrice}>
                       {item.subtotal.toLocaleString("vi-VN")}đ
                     </Text>
                   </View>

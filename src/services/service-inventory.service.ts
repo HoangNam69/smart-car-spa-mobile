@@ -3,10 +3,10 @@
  * Handles enriching services with inventory information and filtering
  */
 
+import { InventoryViewSimple } from "../types/inventory.types";
+import { Service, ServiceProduct } from "../types/service.types";
 import { InventoryService } from "./inventory.service";
 import { ServiceService } from "./service.service";
-import { Service, ServiceProduct } from "../types/service.types";
-import { InventoryViewSimple } from "../types/inventory.types";
 
 export interface ServiceProductWithInventory extends ServiceProduct {
   inventory?: InventoryViewSimple;
@@ -114,7 +114,7 @@ export async function enrichServicesWithInventory(
       if (sp.is_required) {
         console.log(`[Inventory Check] Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id}, Required: ${requiredQty}, Available: ${available}, IsAvailable: ${isAvailable}, HasInventory: ${!!inventory}`);
         if (!isAvailable) {
-          console.warn(`[Inventory Check] ⚠️ INSUFFICIENT STOCK - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id}, Required: ${requiredQty}, Available: ${available}`);
+          console.warn(`[Inventory Check]  INSUFFICIENT STOCK - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id}, Required: ${requiredQty}, Available: ${available}`);
         }
       }
 
@@ -132,7 +132,7 @@ export async function enrichServicesWithInventory(
     });
 
     // Check if all required products have enough inventory
-    // ⚠️ QUAN TRỌNG: Chỉ check sản phẩm bắt buộc (is_required = true)
+    //  QUAN TRỌNG: Chỉ check sản phẩm bắt buộc (is_required = true)
     const hasEnoughInventory = enrichedProducts.every((sp) => {
       // If product is not required, skip check (vẫn cho phép service hiển thị)
       if (!sp.is_required) {
@@ -142,28 +142,28 @@ export async function enrichServicesWithInventory(
       // Backend should always return inventory data for products in the request
       // But to be safe, check if inventory data exists
       if (!sp.inventory) {
-        console.warn(`[Inventory Check] ⚠️ NO INVENTORY DATA - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id} - Treating as out of stock`);
+        console.warn(`[Inventory Check]  NO INVENTORY DATA - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id} - Treating as out of stock`);
         return false; // No inventory data = out of stock
       }
       
       // Check if required quantity <= available quantity
       // If isAvailable is false, it means requiredQty > available
       if (!sp.isAvailable) {
-        console.warn(`[Inventory Check] ⚠️ INSUFFICIENT STOCK - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id}, Required: ${sp.quantity}, Available: ${sp.inventory.available}`);
+        console.warn(`[Inventory Check]  INSUFFICIENT STOCK - Service: ${service.service_name}, Product: ${sp.product_info?.product_name || sp.product_id}, Required: ${sp.quantity}, Available: ${sp.inventory.available}`);
         return false;
       }
       
       return true; // Product has enough inventory
     });
 
-    // ⚠️ Lưu ý: Service không có service_products vẫn được coi là có đủ hàng
+    //  Lưu ý: Service không có service_products vẫn được coi là có đủ hàng
     // (vì không cần sản phẩm để thực hiện dịch vụ)
     const finalHasEnoughInventory = serviceProducts.length === 0 ? true : hasEnoughInventory;
 
-    console.log(`[Inventory Check] ✅ Final Result - Service: ${service.service_name}, HasProducts: ${serviceProducts.length > 0}, HasEnoughInventory: ${finalHasEnoughInventory}`);
+    console.log(`[Inventory Check]  Final Result - Service: ${service.service_name}, HasProducts: ${serviceProducts.length > 0}, HasEnoughInventory: ${finalHasEnoughInventory}`);
     
     if (!finalHasEnoughInventory && serviceProducts.length > 0) {
-      console.warn(`[Inventory Check] ❌ Service ${service.service_name} will be HIDDEN - insufficient inventory`);
+      console.warn(`[Inventory Check]  Service ${service.service_name} will be HIDDEN - insufficient inventory`);
       // Log which products are missing
       enrichedProducts
         .filter(sp => sp.is_required && !sp.isAvailable)
@@ -179,11 +179,11 @@ export async function enrichServicesWithInventory(
     };
   });
 
-  // 4. ⚠️ QUAN TRỌNG: Chỉ trả về services có đủ hàng
+  // 4.  QUAN TRỌNG: Chỉ trả về services có đủ hàng
   // Filter out services that don't have enough inventory
   const filteredServices = enrichedServices.filter((service) => service.hasEnoughInventory);
   
-  console.log(`[Inventory Check] 📊 Summary: ${enrichedServices.length} services checked, ${filteredServices.length} passed inventory check, ${enrichedServices.length - filteredServices.length} failed`);
+  console.log(`[Inventory Check]  Summary: ${enrichedServices.length} services checked, ${filteredServices.length} passed inventory check, ${enrichedServices.length - filteredServices.length} failed`);
   
   return filteredServices;
 }

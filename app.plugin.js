@@ -36,7 +36,7 @@ const withNetworkSecurityConfig = (config) => {
 </network-security-config>`;
 
       fs.writeFileSync(xmlFile, xmlContent);
-      console.log('✅ Created network_security_config.xml to allow HTTP traffic');
+      console.log(' Created network_security_config.xml to allow HTTP traffic');
     }
 
     return config;

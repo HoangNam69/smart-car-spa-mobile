@@ -315,7 +315,7 @@ export const DISCOUNT_TYPE_OPTIONS = [
   {
     value: DiscountType.PERCENT,
     label: "Giảm theo phần trăm",
-    icon: "📊",
+    icon: "",
     description: "Giảm giá theo tỷ lệ phần trăm",
   },
   {

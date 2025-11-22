@@ -21,6 +21,7 @@
     "@react-navigation/bottom-tabs": "^7.7.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "@stomp/stompjs": "^7.2.1",
     "axios": "^1.13.1",
     "expo": "54.0.20",
     "expo-constants": "^18.0.10",
@@ -49,7 +50,8 @@
     "react-native-svg": "^15.14.0",
     "react-native-tab-view": "^4.2.0",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-web": "~0.21.0"
+    "react-native-web": "~0.21.0",
+    "text-encoding": "^0.7.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

@@ -1,5 +1,5 @@
-import axiosInstance from "../config/axiosConfig";
 import { API_ENDPOINTS } from "../config/api.constant";
+import axiosInstance from "../config/axiosConfig";
 
 export interface ProductAttributeValue {
   attribute_id: string;
@@ -77,7 +77,7 @@ export const ProductService = {
         API_ENDPOINTS.PRODUCT.GET_ALL_PUBLIC
       }?${queryParams.toString()}`;
 
-      console.log("🔍 [ProductService] Fetching products from:", url);
+      console.log(" [ProductService] Fetching products from:", url);
 
       const response = await axiosInstance.get(url);
 
@@ -85,17 +85,17 @@ export const ProductService = {
       const products = response.data?.data?.content || [];
 
       console.log(
-        "✅ [ProductService] Products received:",
+        " [ProductService] Products received:",
         products.length,
         "items"
       );
       if (products.length > 0) {
-        console.log("📦 [ProductService] Sample product:", products[0]);
+        console.log(" [ProductService] Sample product:", products[0]);
       }
 
       return products;
     } catch (error: any) {
-      console.error("❌ [ProductService] Error fetching products:");
+      console.error(" [ProductService] Error fetching products:");
       console.error("   Status:", error.response?.status);
       console.error("   Message:", error.response?.data || error.message);
       console.error("   URL:", error.config?.baseURL + error.config?.url);
@@ -106,7 +106,7 @@ export const ProductService = {
   // Get product by URL
   async getProductByUrl(productUrl: string): Promise<Product | null> {
     try {
-      console.log(`🔍 [ProductService] Fetching product: ${productUrl}`);
+      console.log(` [ProductService] Fetching product: ${productUrl}`);
       const url = API_ENDPOINTS.PRODUCT.GET_BY_URL.replace("{url}", productUrl);
       const response = await axiosInstance.get(url);
 
@@ -114,13 +114,13 @@ export const ProductService = {
       const product = response.data?.data || response.data;
 
       console.log(
-        "✅ [ProductService] Product received:",
+        " [ProductService] Product received:",
         product?.product_name
       );
       return product;
     } catch (error: any) {
       console.error(
-        `❌ [ProductService] Error fetching product ${productUrl}:`,
+        ` [ProductService] Error fetching product ${productUrl}:`,
         error.response?.data || error.message
       );
       throw error;
@@ -130,7 +130,7 @@ export const ProductService = {
   // Get product by ID
   async getProductById(productId: string): Promise<Product | null> {
     try {
-      console.log(`🔍 [ProductService] Fetching product ID: ${productId}`);
+      console.log(` [ProductService] Fetching product ID: ${productId}`);
       const url = API_ENDPOINTS.PRODUCT.GET_BY_ID.replace("{id}", productId);
       const response = await axiosInstance.get(url);
 
@@ -138,13 +138,13 @@ export const ProductService = {
       const product = response.data?.data || response.data;
 
       console.log(
-        "✅ [ProductService] Product received:",
+        " [ProductService] Product received:",
         product?.product_name
       );
       return product;
     } catch (error: any) {
       console.error(
-        `❌ [ProductService] Error fetching product ${productId}:`,
+        ` [ProductService] Error fetching product ${productId}:`,
         error.response?.data || error.message
       );
       throw error;
@@ -158,7 +158,7 @@ export const ProductService = {
       return response.data.data;
     } catch (error: any) {
       console.error(
-        `❌ [ProductService] Error fetching images for ${productId}:`,
+        ` [ProductService] Error fetching images for ${productId}:`,
         error.response?.data || error.message
       );
       return [];

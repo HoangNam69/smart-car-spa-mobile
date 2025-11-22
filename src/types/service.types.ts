@@ -139,7 +139,7 @@ export interface CreateServiceRequest {
   service_url: string;
   category_id?: string;
   description?: string;
-  estimated_duration?: number; // ✅ Thêm estimated_duration
+  estimated_duration?: number; //  Thêm estimated_duration
   required_skill_level: SkillLevel;
   service_type_id: string;
   is_featured?: boolean;
@@ -180,7 +180,7 @@ export interface UpdateServiceRequest {
   service_url?: string;
   category_id?: string;
   description?: string;
-  estimated_duration?: number; // ✅ Thêm estimated_duration
+  estimated_duration?: number; //  Thêm estimated_duration
   required_skill_level?: SkillLevel;
   service_type_id?: string;
   is_featured?: boolean;

@@ -219,7 +219,7 @@ export default function UpdateBookingScreen() {
         const seenServiceIds = new Set<string>();
 
         bookingData.booking_items.forEach((item) => {
-          console.log("🔍 Processing booking item:", {
+          console.log(" Processing booking item:", {
             service_id: item.service_id,
             service_name: item.service_name,
           });
@@ -230,7 +230,7 @@ export default function UpdateBookingScreen() {
               (s) => s.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log("✅ Found matching service by service_id:", {
+              console.log(" Found matching service by service_id:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service: priceBookItem.service,
@@ -239,16 +239,16 @@ export default function UpdateBookingScreen() {
               seenServiceIds.add(item.service_id);
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.warn("⚠️ Service not found by service_id:", item.service_id);
+              console.warn(" Service not found by service_id:", item.service_id);
             }
           } else if (!item.service_id && item.service_name) {
             // Fallback: Try to match by service_name if service_id is null
-            console.log("⚠️ service_id is null, trying to match by service_name:", item.service_name);
+            console.log(" service_id is null, trying to match by service_name:", item.service_name);
             const priceBookItem = servicesData.find(
               (s) => s.item_name === item.service_name && s.service && !seenServiceIds.has(s.item_id)
             );
             if (priceBookItem) {
-              console.log("✅ Found matching service by service_name:", {
+              console.log(" Found matching service by service_name:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service_id: priceBookItem.service?.service_id,
@@ -259,7 +259,7 @@ export default function UpdateBookingScreen() {
               }
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.warn("⚠️ Service not found by service_name:", item.service_name);
+              console.warn(" Service not found by service_name:", item.service_name);
             }
           }
         });
@@ -268,7 +268,7 @@ export default function UpdateBookingScreen() {
           i === self.findIndex((sv) => sv.item_id === s.item_id)
         );
 
-        console.log("📋 Final services array:", {
+        console.log(" Final services array:", {
           originalCount: bookingData.booking_items.length,
           uniqueCount: uniqueServices.length,
           services: uniqueServices.map((s) => ({
@@ -315,7 +315,7 @@ export default function UpdateBookingScreen() {
                         bays.find((b) => b.bay_id === bookingData.bay_id);
             if (bay) {
               setSelectedBay(bay);
-              console.log("✅ Set selected bay:", bay.bay_name);
+              console.log(" Set selected bay:", bay.bay_name);
             }
           }
 
@@ -351,7 +351,7 @@ export default function UpdateBookingScreen() {
                 };
                 setSelectedSlot(slot);
                 setOriginalSlot(slot);
-                console.log("✅ Set selected slot:", slot);
+                console.log(" Set selected slot:", slot);
               }
             }
           }
@@ -777,7 +777,7 @@ export default function UpdateBookingScreen() {
         .filter((id): id is string => !!id)
     );
 
-    console.log("🔍 Building booking_items array:", {
+    console.log(" Building booking_items array:", {
       originalServiceIds: Array.from(originalServiceIds),
       selectedServiceIds: Array.from(selectedServiceIds),
       originalItemsCount: originalItems.length,
@@ -797,7 +797,7 @@ export default function UpdateBookingScreen() {
           service_id: serviceId,
           operation: "DELETE",
         });
-        console.log("🗑️ Adding DELETE item (by service_id):", {
+        console.log(" Adding DELETE item (by service_id):", {
           service_id: serviceId,
           item_name: originalItem?.item_name,
         });
@@ -809,7 +809,7 @@ export default function UpdateBookingScreen() {
     selectedItems.forEach((item) => {
       const serviceId = item.service?.service_id;
       if (!serviceId) {
-        console.warn("⚠️ Skipping item without service_id:", item);
+        console.warn(" Skipping item without service_id:", item);
         return;
       }
 
@@ -822,17 +822,15 @@ export default function UpdateBookingScreen() {
           service_description: item.service?.description || "",
         };
         bookingItems.push(bookingItem);
-        console.log("➕ Adding NEW item:", {
+        console.log(" Adding NEW item:", {
           service_id: serviceId,
           service_name: item.item_name,
         });
       }
-      // Note: UPDATE operations are not sent explicitly
-      // Backend will handle UPDATE implicitly if service_id exists in both original and selected
-      // We only need to send DELETE and ADD operations
+
     });
 
-    console.log("📦 Final booking_items array:", bookingItems);
+    console.log(" Final booking_items array:", bookingItems);
     return bookingItems;
   }, [originalItems, selectedItems]);
 
@@ -851,11 +849,6 @@ export default function UpdateBookingScreen() {
       return;
     }
 
-    // Note: Không còn validate duration ở frontend - backend sẽ kiểm tra và thông báo nếu cần
-
-    // Validate: Check inventory for newly added services
-    // Note: We need to check inventory again here to ensure services are still available
-    // This is a safety check before submitting
     if (selectedBranch && selectedItems.length > 0) {
       try {
         // Extract Service objects from selectedItems
@@ -933,9 +926,7 @@ export default function UpdateBookingScreen() {
       // Build booking_items array for API
       const bookingItems = buildBookingItemsArray();
       
-      // For schedule booking, backend will calculate scheduled_start_at and scheduled_end_at from schedule_date and schedule_start_time
-      // So we should NOT send scheduled_start_at and scheduled_end_at when we have schedule_date and schedule_start_time
-      // to avoid timezone issues and let backend handle the calculation correctly
+
       const updateRequest: UpdateBookingRequest = {
         vehicle_license_plate: selectedVehicle.license_plate,
         vehicle_brand_name: selectedVehicle.brand_name || "",
@@ -947,9 +938,6 @@ export default function UpdateBookingScreen() {
         notes: notes || "",
       };
 
-      // Handle branch_id based on booking type (similar to web app)
-      // For walk-in booking, don't send branch_id as it cannot be changed
-      // For slot booking, always send branch_id
       if (!isWalkInBooking) {
         updateRequest.branch_id = selectedBranch.branch_id;
       }
@@ -958,10 +946,6 @@ export default function UpdateBookingScreen() {
       if (isSlotBooking && selectedSlot && selectedBay) {
         // For slot booking, always send service_bay_id if slot is selected
         updateRequest.service_bay_id = selectedBay.bay_id;
-      } else if (isWalkInBooking) {
-        // For walk-in booking, only set service_bay_id if it's different from original
-        // Note: We don't have selectedWalkInBay state in mobile, so we'll skip this for now
-        // If needed, we can add it later
       }
 
       // Add booking_items array if it has items
@@ -975,15 +959,7 @@ export default function UpdateBookingScreen() {
         updateRequest.schedule_date = dateStr; // YYYY-MM-DD format
         updateRequest.schedule_start_time = selectedSlot.time; // HH:mm format
         // DO NOT send scheduled_start_at and scheduled_end_at - backend will calculate from schedule_date and schedule_start_time
-      } else if (isWalkInBooking) {
-        // For walk-in booking, we don't set scheduled times or slot info
-        // Backend will handle walk-in booking scheduling automatically
-        // DO NOT send scheduled_start_at, scheduled_end_at, schedule_date, or schedule_start_time
-      } else {
-        // For other booking types (fallback), send scheduled times directly if needed
-        // This should rarely happen, but we keep it for safety
-        // updateRequest.scheduled_start_at = bookingDate.toISOString();
-      }
+      } 
 
       await bookingService.updateBooking(bookingId, updateRequest);
       setSnackbar({ visible: true, message: "Cập nhật booking thành công!", error: false });
@@ -1244,7 +1220,7 @@ export default function UpdateBookingScreen() {
                       // Filter out the removed item
                       const newItems = selectedItems.filter((i) => i.item_id !== item.item_id);
                       setSelectedItems(newItems);
-                      console.log("🗑️ Service removed from selection:", {
+                      console.log(" Service removed from selection:", {
                         removedItem: item.item_name,
                         service_id: item.service?.service_id,
                         remainingItems: newItems.length,
@@ -1283,7 +1259,7 @@ export default function UpdateBookingScreen() {
                     Tổng thời gian slot đã đặt ban đầu: <Text style={{ fontWeight: "600" }}>{totalOriginalSlotTime} phút</Text>
                   </Text>
                   <Text style={{ color: "#D46B08", fontSize: 12 }}>
-                    ⚠️ Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                     Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
                   </Text>
                 </View>
               );

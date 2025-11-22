@@ -1,11 +1,9 @@
 import CarouselCustom from "@/components/carousel/CarouselCustom";
 import FeaturedProductsSection from "@/components/home/FeaturedProductsSection";
-import FeaturedServicesSection from "@/components/home/FeaturedServicesSection";
 import { Image, View, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
-  console.log("🏠 [Index] Rendering home screen...");
   
   return (
     <SafeAreaView
@@ -32,9 +30,6 @@ export default function Index() {
 
         {/* Featured Products Section */}
         <FeaturedProductsSection />
-
-        {/* Featured Services Section */}
-        {/*<FeaturedServicesSection />*/}
       </ScrollView>
     </SafeAreaView>
   );

@@ -13,6 +13,7 @@ import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../src/context/AuthContext";
 import { CartProvider } from "../src/context/CartContext";
+import { WebSocketProviderWrapper } from "../src/providers/WebSocketProvider";
 import { theme } from "../src/config/theme";
 
 const paperTheme = {
@@ -48,7 +49,7 @@ export default function RootLayout() {
 
   // Log initialization
   useEffect(() => {
-    console.log("✅ RootLayout initialized");
+    console.log("RootLayout initialized");
   }, []);
 
   if (!fontsLoaded) {
@@ -79,10 +80,11 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <CartProvider>
-          <PaperProvider theme={theme}>
-            <StatusBar style="auto" />
-            <Stack>
+        <WebSocketProviderWrapper>
+          <CartProvider>
+            <PaperProvider theme={theme}>
+              <StatusBar style="auto" />
+              <Stack>
               <Stack.Screen
                 name="(tabs)"
                 options={{ headerShown: false }}
@@ -246,6 +248,7 @@ export default function RootLayout() {
             </Stack>
           </PaperProvider>
         </CartProvider>
+        </WebSocketProviderWrapper>
       </AuthProvider>
     </SafeAreaProvider>
   );
