@@ -1,10 +1,22 @@
 import axiosInstance from "../config/axiosConfig";
 import { ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, LoginResponse, SignupRequest, SignupResponse } from "../types/auth.types";
+import { SessionInfo } from "../types/session.types";
+import { getDeviceId, getDeviceName } from "../utils/device.manager";
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await axiosInstance.post("/auth/login", credentials);
+      // Add device info if not provided (for multi-device support)
+      const deviceId = credentials.device_id || await getDeviceId();
+      const deviceName = credentials.device_name || await getDeviceName();
+      
+      const loginPayload: LoginRequest = {
+        ...credentials,
+        device_id: deviceId,
+        device_name: deviceName,
+      };
+
+      const response = await axiosInstance.post("/auth/login", loginPayload);
       console.log("Login response:", response.data);
       const apiResponse = response.data;
 
@@ -201,6 +213,62 @@ class AuthService {
     } catch (error) {
       console.error("Verify token error:", error);
       return false;
+    }
+  }
+
+  /**
+   * Get all active sessions for current user
+   */
+  async getActiveSessions(): Promise<SessionInfo[]> {
+    try {
+      const response = await axiosInstance.get("/auth/sessions");
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.message || "Không thể lấy danh sách sessions");
+    } catch (error) {
+      console.error("Get active sessions error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Có lỗi xảy ra khi lấy danh sách sessions"
+      );
+    }
+  }
+
+  /**
+   * Logout specific device by device ID
+   */
+  async logoutDevice(deviceId: string): Promise<void> {
+    try {
+      const response = await axiosInstance.post(`/auth/sessions/${deviceId}/logout`);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Không thể logout device");
+      }
+    } catch (error) {
+      console.error("Logout device error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Có lỗi xảy ra khi logout device"
+      );
+    }
+  }
+
+  /**
+   * Logout all other devices except current device
+   */
+  async logoutAllOtherDevices(): Promise<void> {
+    try {
+      const response = await axiosInstance.post("/auth/sessions/logout-others");
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Không thể logout các devices khác");
+      }
+    } catch (error) {
+      console.error("Logout all other devices error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Có lỗi xảy ra khi logout các devices khác"
+      );
     }
   }
 }

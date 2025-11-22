@@ -2,6 +2,8 @@ export interface LoginRequest {
   email?: string;
   phone_number?: string;
   password: string;
+  device_id?: string; // Optional: device identifier for multi-device support
+  device_name?: string; // Optional: human-readable device name
 }
 
 export interface ChangePasswordRequest {
