@@ -43,6 +43,7 @@ import {
   type VehicleProfileDto,
 } from "../../src/services/vehicleProfile.service";
 import { Service, SkillLevel } from "../../src/types/service.types";
+import { getErrorMessage } from "../../src/utils/error.helper";
 
 export default function BookingScreen() {
   const theme = useTheme();
@@ -560,13 +561,25 @@ export default function BookingScreen() {
       });
       setTimeout(() => router.replace("/(tabs)"), 1000);
     } catch (e: any) {
-      const serverMsg = e?.response?.data?.message || e?.response?.data?.error;
       console.error("Create booking failed:", e?.response?.data || e);
+      
+      // Extract error message from backend using helper
+      const errorMessage = getErrorMessage(e);
+      const errorDuration = 3; // Duration in seconds
+      
       setSnackbar({
         visible: true,
-        message: serverMsg || e?.message || "Đặt lịch thất bại",
+        message: errorMessage,
         error: true,
       });
+      
+      // Reload available slots after error message disappears
+      setTimeout(() => {
+        if (branchId && bayId && bookingDate && totalDuration > 0) {
+          console.log("Reloading available slots after error...");
+          loadSlots();
+        }
+      }, errorDuration * 1000);
     } finally {
       setSubmitting(false);
     }
@@ -1212,7 +1225,7 @@ export default function BookingScreen() {
       <Snackbar
         visible={snackbar.visible}
         onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
-        duration={1500}
+        duration={snackbar.error ? 3000 : 1500}
         style={{
           backgroundColor: snackbar.error
             ? theme.colors.error

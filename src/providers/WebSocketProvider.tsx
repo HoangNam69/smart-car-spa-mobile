@@ -1,6 +1,6 @@
-import { useEffect, ReactNode } from 'react';
-import { websocketService } from '../lib/websocket/websocket.service';
+import { ReactNode, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { websocketService } from '../lib/websocket/websocket.service';
 
 interface WebSocketProviderProps {
   children: ReactNode;
