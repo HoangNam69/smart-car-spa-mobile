@@ -4,6 +4,7 @@ import { FlatList, RefreshControl, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator, Badge, Card, Chip, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
+import { useBookingEvents, useTrackingEvents } from "../../../src/hooks/useWebSocket";
 import { bookingService } from "../../../src/services/booking.service";
 import { BookingInfoDto } from "../../../src/types/booking.types";
 
@@ -12,6 +13,9 @@ export default function CareHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [allBookings, setAllBookings] = useState<BookingInfoDto[]>([]);
+  const [tab, setTab] = useState<
+    "ALL" | "CHECKED_IN" | "IN_PROGRESS" | "COMPLETED"
+  >("ALL");
 
   const fetchData = useCallback(async () => {
     if (!user?.user_id) return;
@@ -36,6 +40,56 @@ export default function CareHistoryScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Subscribe to WebSocket booking events for real-time reload
+  // QUAN TRỌNG: Care history cần subscribe booking events vì khi booking được
+  // confirm/checkin/started/completed, status thay đổi và booking sẽ xuất hiện/ẩn trong care history
+  useBookingEvents({
+    onBookingConfirmed: (event) => {
+      console.log('[CareHistory] WebSocket: Booking confirmed, reloading...');
+      fetchData();
+    },
+    onBookingCheckedIn: (event) => {
+      console.log('[CareHistory] WebSocket: Booking checked in, reloading...');
+      fetchData();
+    },
+    onBookingStarted: (event) => {
+      console.log('[CareHistory] WebSocket: Booking started, reloading...');
+      fetchData();
+    },
+    onBookingCompleted: (event) => {
+      console.log('[CareHistory] WebSocket: Booking completed, reloading...');
+      fetchData();
+    },
+    onBookingUpdated: (event) => {
+      console.log('[CareHistory] WebSocket: Booking updated, reloading...');
+      fetchData();
+    },
+    onReload: () => {
+      console.log('[CareHistory] WebSocket: Booking reload signal received, reloading...');
+      fetchData();
+    },
+  });
+
+  // Subscribe to WebSocket tracking updates for real-time reload
+  useTrackingEvents({
+    onTrackingUpdated: (event) => {
+      console.log('[CareHistory] WebSocket: Tracking updated, reloading...');
+      fetchData();
+    },
+    onTrackingCompleted: (event) => {
+      console.log('[CareHistory] WebSocket: Tracking completed, reloading...');
+      fetchData();
+    },
+    onTrackingStarted: (event) => {
+      console.log('[CareHistory] WebSocket: Tracking started, reloading...');
+      fetchData();
+    },
+    onReload: () => {
+      console.log('[CareHistory] WebSocket: Tracking reload signal received, reloading...');
+      fetchData();
+    },
+  });
 
   const onRefresh = useCallback(async () => {
     if (!user?.user_id) return;
@@ -130,6 +184,25 @@ export default function CareHistoryScreen() {
     </TouchableOpacity>
   );
 
+  const filtered = (() => {
+    if (tab === "ALL") return allBookings;
+    return allBookings.filter((b) => (b.status || "").toUpperCase() === tab);
+  })();
+
+  const counts = (() => {
+    const map: Record<string, number> = {
+      ALL: allBookings.length,
+      CHECKED_IN: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+    };
+    allBookings.forEach((b) => {
+      const s = (b.status || "").toUpperCase();
+      if (s in map) map[s] += 1;
+    });
+    return map;
+  })();
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       {loading ? (
@@ -142,13 +215,46 @@ export default function CareHistoryScreen() {
           <Text>Bạn chưa có lịch chăm sóc nào</Text>
         </View>
       ) : (
-        <FlatList
-          data={allBookings}
-          keyExtractor={(item) => item.booking_id}
-          renderItem={renderItem}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
-        />
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
+            <FlatList
+              data={[
+                { key: "ALL", label: `Tất cả (${counts.ALL})` },
+                { key: "CHECKED_IN", label: `Check-in (${counts.CHECKED_IN})` },
+                { key: "IN_PROGRESS", label: `Đang chăm sóc (${counts.IN_PROGRESS})` },
+                { key: "COMPLETED", label: `Hoàn thành (${counts.COMPLETED})` },
+              ]}
+              keyExtractor={(i) => i.key}
+              renderItem={({ item }) => {
+                const isSelected = tab === (item.key as typeof tab);
+                return (
+                  <Chip
+                    selected={isSelected}
+                    onPress={() => setTab(item.key as typeof tab)}
+                    style={{
+                      marginRight: 8,
+                      marginVertical: 6,
+                      backgroundColor: isSelected ? "#E8F5E9" : undefined,
+                    }}
+                    selectedColor={isSelected ? "#2E7D32" : undefined}
+                    compact
+                  >
+                    {item.label}
+                  </Chip>
+                );
+              }}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.booking_id}
+            renderItem={renderItem}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
+          />
+        </View>
       )}
     </SafeAreaView>
   );

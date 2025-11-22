@@ -26,6 +26,8 @@ export {
   useVehicleProfileReload,
   useCustomerReload,
   useWebSocketStatus,
+  useBookingEvents,
+  useTrackingEvents,
 } from "./useWebSocket";
 
 // Re-export types

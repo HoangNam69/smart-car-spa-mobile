@@ -1,12 +1,15 @@
 import { Client, IMessage, StompSubscription } from "@stomp/stompjs";
+import { tokenStorage } from "../../storage/tokenStorage";
 import { getWebSocketUrl, WS_CONFIG } from "./websocket.config";
 import {
-  Topic,
-  MessageSignal,
+  BookingEventDto,
+  EnhancedMessageCallback,
   MessageCallback,
+  MessageSignal,
+  Topic,
+  TrackingEventDto,
   WebSocketStatus,
 } from "./websocket.types";
-import { tokenStorage } from "../../storage/tokenStorage";
 
 import "text-encoding";
 
@@ -14,7 +17,8 @@ class WebSocketService {
   private client: Client | null = null;
   private status: WebSocketStatus = "DISCONNECTED";
   private subscriptions: Map<Topic, StompSubscription> = new Map();
-  private callbacks: Map<Topic, Set<MessageCallback>> = new Map();
+  // Support both old MessageCallback (string signal) and new EnhancedMessageCallback (structured event)
+  private callbacks: Map<Topic, Set<MessageCallback | EnhancedMessageCallback>> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private statusListeners: Set<(status: WebSocketStatus) => void> = new Set();
@@ -199,15 +203,31 @@ class WebSocketService {
     const wsUrl = await this.buildWebSocketUrl();
 
     // Create STOMP client với Native WebSocket
+    // QUAN TRỌNG: Với Native WebSocket trong React Native, cần dùng webSocketFactory
+    // vì @stomp/stompjs có thể không tự động detect React Native WebSocket với brokerURL
+    // brokerURL thường dùng cho browser WebSocket, không phải React Native
     this.client = new Client({
-      // Sử dụng webSocketFactory để tạo WebSocket instance từ React Native
-      // React Native có WebSocket global, không cần import
+      // webSocketFactory: Tạo WebSocket instance từ React Native global WebSocket
+      // Điều này đảm bảo @stomp/stompjs sử dụng đúng WebSocket implementation
       webSocketFactory: () => {
-        if (WS_CONFIG.debug) {
-          console.log("[WebSocket] Creating React Native WebSocket:", wsUrl);
-        }
-        // Sử dụng global WebSocket từ React Native
-        return new WebSocket(wsUrl) as any;
+        console.log("[WebSocket] Creating React Native WebSocket:", wsUrl);
+        const ws = new WebSocket(wsUrl);
+        
+        // Đảm bảo WebSocket đã opened trước khi STOMP client sử dụng
+        // Điều này giúp tránh race condition giữa WebSocket opening và STOMP CONNECT
+        ws.onopen = () => {
+          console.log("[WebSocket]  Native WebSocket onopen - ready for STOMP");
+        };
+        
+        return ws as any;
+      },
+
+      // STOMP CONNECT headers
+      // QUAN TRỌNG: Một số backend yêu cầu headers trong CONNECT frame
+      // Mặc dù token đã có trong URL, nhưng có thể cần thêm headers để backend xử lý đúng
+      connectHeaders: {
+        // Không cần login/passcode vì đã dùng JWT token trong URL
+        // Nhưng có thể thêm host header nếu backend yêu cầu
       },
 
       // Reconnect configuration
@@ -217,21 +237,24 @@ class WebSocketService {
       heartbeatIncoming: WS_CONFIG.heartbeatIncoming,
       heartbeatOutgoing: WS_CONFIG.heartbeatOutgoing,
 
-      // Debug logging
-      debug: (str: string) => {
-        if (WS_CONFIG.debug) {
-          console.log(`[STOMP] ${str}`);
-        }
-      },
+      // QUAN TRỌNG: React Native specific configurations
+      // Theo @stomp/stompjs documentation cho React Native
+      // - appendMissingNULLonIncoming: true - Fix lỗi React Native cắt bỏ NULL characters
+      // - forceBinaryWSFrames: true - Force binary frames để tránh vấn đề với text encoding
+      appendMissingNULLonIncoming: true,
+      forceBinaryWSFrames: true,
 
       // Event: Connection established
       onConnect: (frame) => {
-        console.log("[WebSocket] Connected successfully", {
+        console.log("[WebSocket] Connected successfully!", {
           server: frame?.headers?.server,
           version: frame?.headers?.version,
+          command: frame?.command,
+          headers: frame?.headers,
         });
         this.setStatus("CONNECTED");
         this.reconnectAttempts = 0;
+        console.log("[WebSocket]  Subscribing to all topics...");
         this.subscribeToAllTopics();
       },
 
@@ -355,7 +378,20 @@ class WebSocketService {
     };
 
     // Activate client → start connection
-    this.client.activate();
+    // QUAN TRỌNG: Với Native WebSocket, cần đảm bảo WebSocket đã sẵn sàng
+    // trước khi STOMP client gửi CONNECT frame
+    // Theo research: Có thể cần delay nhỏ để WebSocket fully ready
+      console.log("[WebSocket]  Activating STOMP client...");
+    
+    // Small delay để đảm bảo WebSocket factory được gọi và WebSocket instance ready
+    // Điều này giúp tránh race condition với STOMP protocol negotiation
+    setTimeout(() => {
+      if (this.client && !this.client.active) {
+        console.log("[WebSocket]  Activating STOMP client now (after WebSocket ready)...");
+        this.client.activate();
+        console.log("[WebSocket]  STOMP client activated, waiting for CONNECTED frame...");
+      }
+    }, 50); // 50ms delay - đủ để WebSocket ready nhưng không quá lâu
   }
 
   public disconnect(): void {
@@ -372,7 +408,7 @@ class WebSocketService {
     this.reconnectAttempts = 0;
   }
 
-  public subscribe(topic: Topic, callback: MessageCallback): () => void {
+  public subscribe(topic: Topic, callback: MessageCallback | EnhancedMessageCallback): () => void {
     if (!this.callbacks.has(topic)) {
       this.callbacks.set(topic, new Set());
     }
@@ -416,18 +452,68 @@ class WebSocketService {
 
     const subscription = this.client.subscribe(topic, (message: IMessage) => {
       try {
-        const signal = message.body as MessageSignal;
+        // Parse message body - có thể là string signal hoặc structured JSON event
+        const body = message.body;
 
         if (WS_CONFIG.debug) {
-          console.log(`[WebSocket] Received message from ${topic}:`, signal);
+          console.log(`[WebSocket] Received message from ${topic}:`, body);
         }
 
+        // Try to parse as JSON (structured event)
+        // Support both BookingEventDto and TrackingEventDto
+        let parsedMessage: MessageSignal | BookingEventDto | TrackingEventDto | null = null;
+        try {
+          const parsed = JSON.parse(body);
+          
+          if (WS_CONFIG.debug) {
+            console.log(`[WebSocket] Parsed message from ${topic}:`, JSON.stringify(parsed, null, 2));
+          }
+          
+          // Check if it's a structured event (has event_type field)
+          if (parsed.event_type) {
+            // Check if it's a tracking event (has tracking_id) or booking event (has booking_id but no tracking_id)
+            if (parsed.tracking_id) {
+              parsedMessage = parsed as TrackingEventDto;
+              if (WS_CONFIG.debug) {
+                console.log(`[WebSocket] Identified as TrackingEvent: ${parsed.event_type} for tracking ${parsed.tracking_id}`);
+              }
+            } else if (parsed.booking_id) {
+              parsedMessage = parsed as BookingEventDto;
+              if (WS_CONFIG.debug) {
+                console.log(`[WebSocket] Identified as BookingEvent: ${parsed.event_type} for booking ${parsed.booking_code}`);
+              }
+            } else {
+              // Has event_type but no tracking_id or booking_id, treat as string signal
+              if (WS_CONFIG.debug) {
+                console.warn(`[WebSocket] Event has event_type but no tracking_id or booking_id, treating as string signal`);
+              }
+              parsedMessage = body as MessageSignal;
+            }
+          } else {
+            // Not a structured event, treat as string signal
+            if (WS_CONFIG.debug) {
+              console.log(`[WebSocket] No event_type field, treating as string signal: ${body}`);
+            }
+            parsedMessage = body as MessageSignal;
+          }
+        } catch (parseError) {
+          // Not JSON, treat as string signal (backward compatible)
+          if (WS_CONFIG.debug) {
+            console.log(`[WebSocket] Failed to parse as JSON, treating as string signal: ${body}`);
+            console.log(`[WebSocket] Parse error:`, parseError);
+          }
+          parsedMessage = body as MessageSignal;
+        }
+
+        // Call all callbacks for this topic
         const callbacks = this.callbacks.get(topic);
         if (callbacks) {
           callbacks.forEach((callback) => {
             try {
-              callback(signal);
+              // Callback có thể là MessageCallback (string) hoặc EnhancedMessageCallback (string | event)
+              callback(parsedMessage as any);
             } catch (error) {
+              // Error trong callback không ảnh hưởng đến callbacks khác
               console.error(
                 `[WebSocket] Error in callback for ${topic}:`,
                 error
@@ -452,11 +538,25 @@ class WebSocketService {
       "/topic/bookings",
       "/topic/vehicle-profiles",
       "/topic/customers",
+      "/topic/trackings",
     ];
+
+    console.log('[WebSocket] Checking topics to subscribe...');
+    console.log('[WebSocket] Callbacks map:', {
+      bookings: this.callbacks.get('/topic/bookings')?.size || 0,
+      trackings: this.callbacks.get('/topic/trackings')?.size || 0,
+      vehicleProfiles: this.callbacks.get('/topic/vehicle-profiles')?.size || 0,
+      customers: this.callbacks.get('/topic/customers')?.size || 0,
+    });
 
     topics.forEach((topic) => {
       if (this.callbacks.has(topic) && this.callbacks.get(topic)!.size > 0) {
+        console.log(`[WebSocket] Subscribing to ${topic} (has ${this.callbacks.get(topic)!.size} callbacks)`);
         this.subscribeToTopic(topic);
+      } else {
+        if (WS_CONFIG.debug) {
+          console.log(`[WebSocket] Skipping ${topic} (no callbacks registered)`);
+        }
       }
     });
   }

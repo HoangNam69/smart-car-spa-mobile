@@ -16,6 +16,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
+import { useBookingEvents } from "../../../src/hooks/useWebSocket";
 import { bookingService } from "../../../src/services/booking.service";
 import { BookingInfoDto as BookingServiceDto, BookingType } from "../../../src/types/booking.types";
 
@@ -69,6 +70,43 @@ export default function BookingHistoryScreen() {
       }
     }, [fetchData])
   );
+
+  // Subscribe to WebSocket booking updates for real-time reload
+  // Sử dụng useBookingEvents để handle cả structured events và string signals
+  useBookingEvents({
+    onBookingCreated: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking created, reloading...');
+      fetchData();
+    },
+    onBookingConfirmed: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking confirmed, reloading...');
+      fetchData();
+    },
+    onBookingCheckedIn: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking checked in, reloading...');
+      fetchData();
+    },
+    onBookingStarted: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking started, reloading...');
+      fetchData();
+    },
+    onBookingCompleted: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking completed, reloading...');
+      fetchData();
+    },
+    onBookingCancelled: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking cancelled, reloading...');
+      fetchData();
+    },
+    onBookingUpdated: (event) => {
+      console.log('[BookingHistory] WebSocket: Booking updated, reloading...');
+      fetchData();
+    },
+    onReload: () => {
+      console.log('[BookingHistory] WebSocket: Reload signal received, reloading...');
+      fetchData();
+    },
+  });
 
   const onRefresh = useCallback(async () => {
     if (!user?.user_id) return;

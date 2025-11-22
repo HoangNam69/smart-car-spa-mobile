@@ -14,6 +14,7 @@ import {
   serviceProcessTrackingService,
   type ServiceProcessTrackingInfoDto,
 } from "../../../../src/services/serviceProcessTracking.service";
+import { useTrackingEvents } from "../../../../src/hooks/useWebSocket";
 
 interface ServiceWithTrackings {
   serviceId: string;
@@ -99,6 +100,35 @@ export default function CareProcessScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Subscribe to WebSocket tracking updates for real-time updates
+  useTrackingEvents({
+    onTrackingUpdated: (event) => {
+      // Only reload if this tracking belongs to current booking
+      if (event.booking_id === bookingId) {
+        console.log('[CareProcess] WebSocket: Tracking updated for current booking, reloading...');
+        fetchData();
+      }
+    },
+    onTrackingCompleted: (event) => {
+      // Only reload if this tracking belongs to current booking
+      if (event.booking_id === bookingId) {
+        console.log('[CareProcess] WebSocket: Tracking completed for current booking, reloading...');
+        fetchData();
+      }
+    },
+    onTrackingStarted: (event) => {
+      // Only reload if this tracking belongs to current booking
+      if (event.booking_id === bookingId) {
+        console.log('[CareProcess] WebSocket: Tracking started for current booking, reloading...');
+        fetchData();
+      }
+    },
+    onReload: () => {
+      console.log('[CareProcess] WebSocket: Reload signal received, reloading...');
+      fetchData();
+    },
+  });
 
   const getStatusConfig = (status: string) => {
     switch (status) {
