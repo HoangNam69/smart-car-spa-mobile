@@ -18,6 +18,7 @@ class WebSocketService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private statusListeners: Set<(status: WebSocketStatus) => void> = new Set();
+  private isTokenExpired = false; // Flag để dừng retry khi token expired
 
   private async getToken(): Promise<string | null> {
     try {
@@ -25,6 +26,91 @@ class WebSocketService {
     } catch (error) {
       console.error("[WebSocket] Error getting token:", error);
       return null;
+    }
+  }
+
+  /**
+   * Decode base64 string (React Native compatible)
+   * React Native không có atob, dùng cách decode thủ công
+   */
+  private base64Decode(base64: string): string {
+    try {
+      // Base64URL decode (replace - với +, _ với /, và thêm padding nếu cần)
+      const normalized = base64.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+      
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      let result = "";
+      
+      // Decode từng nhóm 4 ký tự
+      for (let i = 0; i < padded.length; i += 4) {
+        const enc1 = chars.indexOf(padded.charAt(i));
+        const enc2 = chars.indexOf(padded.charAt(i + 1));
+        const enc3 = chars.indexOf(padded.charAt(i + 2));
+        const enc4 = chars.indexOf(padded.charAt(i + 3));
+        
+        if (enc1 === -1 || enc2 === -1) {
+          break; // Invalid base64
+        }
+        
+        const bitmap = (enc1 << 18) | (enc2 << 12) | ((enc3 !== -1 ? enc3 : 64) << 6) | (enc4 !== -1 ? enc4 : 64);
+        
+        result += String.fromCharCode((bitmap >> 16) & 255);
+        if (enc3 !== -1 && enc3 !== 64) {
+          result += String.fromCharCode((bitmap >> 8) & 255);
+        }
+        if (enc4 !== -1 && enc4 !== 64) {
+          result += String.fromCharCode(bitmap & 255);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("[WebSocket] Error decoding base64:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if JWT token is expired by decoding the payload
+   * JWT format: header.payload.signature
+   * Payload contains 'exp' claim (expiration timestamp in seconds)
+   */
+  private isTokenExpiredCheck(token: string): boolean {
+    try {
+      // JWT có 3 parts được phân cách bởi dấu chấm
+      const parts = token.split(".");
+      if (parts.length !== 3) {
+        console.warn("[WebSocket] Invalid token format");
+        return true; // Coi như expired nếu format không đúng
+      }
+
+      // Decode payload (base64url)
+      const payload = parts[1];
+      const decoded = this.base64Decode(payload);
+      const claims = JSON.parse(decoded);
+
+      // Check exp claim (expiration time in seconds)
+      if (!claims.exp) {
+        console.warn("[WebSocket] Token has no expiration claim");
+        return true;
+      }
+
+      const expirationTime = claims.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      const isExpired = currentTime >= expirationTime;
+
+      if (isExpired) {
+        const expiredSecondsAgo = Math.floor((currentTime - expirationTime) / 1000);
+        console.error(
+          `[WebSocket] Token expired ${expiredSecondsAgo} seconds ago (exp: ${new Date(expirationTime).toISOString()}, now: ${new Date(currentTime).toISOString()})`
+        );
+      }
+
+      return isExpired;
+    } catch (error) {
+      console.error("[WebSocket] Error checking token expiration:", error);
+      return true; // Coi như expired nếu không thể decode
     }
   }
 
@@ -86,10 +172,24 @@ class WebSocketService {
       return;
     }
 
+    // Reset token expired flag khi bắt đầu connect mới
+    this.isTokenExpired = false;
+
     const token = await this.getToken();
     if (!token) {
       console.error("[WebSocket] Cannot connect: No token available");
       this.setStatus("ERROR");
+      return;
+    }
+
+    // Check token expiration trước khi connect
+    if (this.isTokenExpiredCheck(token)) {
+      console.error(
+        "[WebSocket] Cannot connect: Token is expired. Please refresh token or login again."
+      );
+      this.isTokenExpired = true; // Set flag để dừng retry
+      this.setStatus("ERROR");
+      this.reconnectAttempts = this.maxReconnectAttempts; // Set max attempts để không retry
       return;
     }
 
@@ -138,6 +238,21 @@ class WebSocketService {
       // Event: STOMP protocol error
       onStompError: (frame) => {
         console.error("[WebSocket] STOMP error:", frame);
+        
+        // Check nếu error liên quan đến authentication (token expired/invalid)
+        const errorMessage = frame?.body || frame?.headers?.message || "";
+        if (
+          errorMessage.toLowerCase().includes("expired") ||
+          errorMessage.toLowerCase().includes("unauthorized") ||
+          errorMessage.toLowerCase().includes("invalid token")
+        ) {
+          console.error(
+            "[WebSocket] Authentication error detected. Token may be expired or invalid."
+          );
+          this.isTokenExpired = true;
+          this.reconnectAttempts = this.maxReconnectAttempts; // Dừng retry
+        }
+        
         this.setStatus("ERROR");
       },
 
@@ -148,6 +263,15 @@ class WebSocketService {
           reason: event?.reason,
           wasClean: event?.wasClean,
         });
+        
+        // Check nếu close code là 1006 (abnormal closure) và token expired
+        // 1006 thường xảy ra khi handshake fail (token expired)
+        if (event?.code === 1006 && this.isTokenExpired) {
+          console.error(
+            "[WebSocket] Connection closed due to token expiration. Will not retry."
+          );
+        }
+        
         this.setStatus("DISCONNECTED");
         this.subscriptions.clear();
       },
@@ -182,7 +306,16 @@ class WebSocketService {
 
       this.setStatus("ERROR");
 
-      // Auto reconnect với exponential backoff
+      // Check nếu token expired, dừng retry ngay lập tức
+      if (this.isTokenExpired) {
+        console.error(
+          "[WebSocket] Token expired detected. Stopping reconnection attempts. Please refresh token or login again."
+        );
+        this.reconnectAttempts = this.maxReconnectAttempts; // Set max để không retry
+        return;
+      }
+
+      // Auto reconnect với exponential backoff (chỉ khi không phải token expired)
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
         const delay =
@@ -192,9 +325,22 @@ class WebSocketService {
         );
 
         setTimeout(() => {
-          if (this.status !== "CONNECTED") {
-            this.connect();
-          }
+          // Check lại token trước khi retry
+          this.getToken().then((token) => {
+            if (token && this.isTokenExpiredCheck(token)) {
+              console.error(
+                "[WebSocket] Token expired during retry. Stopping reconnection."
+              );
+              this.isTokenExpired = true;
+              this.reconnectAttempts = this.maxReconnectAttempts;
+              this.setStatus("ERROR");
+              return;
+            }
+
+            if (this.status !== "CONNECTED" && !this.isTokenExpired) {
+              this.connect();
+            }
+          });
         }, delay);
       } else {
         console.error(
@@ -202,7 +348,7 @@ class WebSocketService {
         );
         console.error("  1. Backend endpoint /ws-native is available");
         console.error("  2. Network connectivity");
-        console.error("  3. Token is valid");
+        console.error("  3. Token is valid and not expired");
         console.error("  4. Backend WebSocket server is running");
         this.setStatus("ERROR");
       }
