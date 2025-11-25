@@ -1,5 +1,6 @@
 import CarouselCustom from "@/components/carousel/CarouselCustom";
 import FeaturedProductsSection from "@/components/home/FeaturedProductsSection";
+import AIChatbotWidget from "@/components/ai-chatbot/AIChatbotWidget";
 import { Image, View, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,6 +32,9 @@ export default function Index() {
         {/* Featured Products Section */}
         <FeaturedProductsSection />
       </ScrollView>
+      
+      {/* AI Chatbot Widget */}
+      <AIChatbotWidget position="bottom-right" />
     </SafeAreaView>
   );
 }

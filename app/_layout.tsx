@@ -2,7 +2,7 @@ import * as Font from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { Text, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -11,10 +11,10 @@ import {
 } from "react-native-paper";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { theme } from "../src/config/theme";
 import { AuthProvider } from "../src/context/AuthContext";
 import { CartProvider } from "../src/context/CartContext";
 import { WebSocketProviderWrapper } from "../src/providers/WebSocketProvider";
-import { theme } from "../src/config/theme";
 
 const paperTheme = {
   ...DefaultTheme,

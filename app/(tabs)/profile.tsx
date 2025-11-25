@@ -1,6 +1,6 @@
 import { useAuth } from "@/src/context/AuthContext";
 import { router } from "expo-router";
-import { Alert, Image, View } from "react-native";
+import { Alert, Image, ScrollView, View } from "react-native";
 import { Avatar, Button, Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -130,7 +130,11 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-      <View style={{ flex: 1, padding: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Card style={{ marginBottom: 16 }}>
           <Card.Content>
             <View
@@ -275,13 +279,13 @@ export default function ProfileScreen() {
         <Button
           mode="outlined"
           onPress={handleLogout}
-          style={{ width: "100%" }}
+          style={{ width: "100%", marginTop: 8 }}
           buttonColor="#ffebee"
           textColor="#d32f2f"
         >
           Đăng Xuất
         </Button>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
