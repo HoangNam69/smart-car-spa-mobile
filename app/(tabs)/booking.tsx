@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Button,
   Card,
-  Chip,
   Divider,
   HelperText,
   List,
@@ -15,7 +14,7 @@ import {
   Portal,
   Snackbar,
   Text,
-  useTheme,
+  useTheme
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
@@ -111,11 +110,6 @@ export default function BookingScreen() {
     []
   );
   const [checkingAvailability, setCheckingAvailability] = useState(false);
-
-  const getSlotStatusMeta = (isAvailable: boolean) => {
-    if (isAvailable) return { label: "Trống", bg: "#DCFCE7", fg: "#16A34A" };
-    return { label: "Không khả dụng", bg: "#F3F4F6", fg: "#6B7280" };
-  };
 
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
@@ -994,7 +988,6 @@ export default function BookingScreen() {
                         const isSelected = selectedSlot?.time === slot.time;
                         const selectable = canSelectSlot(slot);
                         const isDisabled = !selectable;
-                        const meta = getSlotStatusMeta(slot.isAvailable);
 
                         // Determine if slot is available but not suitable for duration
                         const isAvailableButNotSuitable =
@@ -1012,8 +1005,8 @@ export default function BookingScreen() {
                               }
                             }}
                             style={{
-                              width: "48%",
-                              marginBottom: 12,
+                              width: "auto",
+                              marginBottom: 10,
                               borderRadius: 10,
                               borderWidth: 2,
                               borderColor: isSelected
@@ -1031,15 +1024,6 @@ export default function BookingScreen() {
                             disabled={isDisabled}
                           >
                             <Card.Content style={{ padding: 12 }}>
-                              <View style={{ alignItems: "flex-end" }}>
-                                <Chip
-                                  compact
-                                  style={{ backgroundColor: meta.bg }}
-                                  textStyle={{ color: meta.fg }}
-                                >
-                                  {meta.label}
-                                </Chip>
-                              </View>
                               <View
                                 style={{ alignItems: "center", marginTop: 6 }}
                               >
@@ -1102,12 +1086,6 @@ export default function BookingScreen() {
               >
                 Đặt lịch
               </Button>
-              {!isStepValid(3) && (
-                <HelperText type="info" visible style={{ marginTop: 8 }}>
-                  {!bayId && "Vui lòng chọn khu vực. "}
-                  {!selectedSlot && "Vui lòng chọn khung giờ."}
-                </HelperText>
-              )}
             </>
           )}
         </ScrollView>
