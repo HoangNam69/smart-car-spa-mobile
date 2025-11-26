@@ -8,12 +8,24 @@ async function getFirebaseAuth() {
   if (!firebaseAuth) {
     try {
       const authModule = await import('@react-native-firebase/auth');
-      firebaseAuth = authModule.default;
+      // @react-native-firebase/auth exports default directly
+      firebaseAuth = authModule.default || authModule;
+      
+      // Kiểm tra xem module có hợp lệ không
+      if (!firebaseAuth || typeof firebaseAuth.signInWithPhoneNumber !== 'function') {
+        throw new Error(
+          'Firebase Auth module không hợp lệ. Vui lòng sử dụng development build.\n' +
+          'Native module RNFBAppModule not found. Re-check module install, linking, configuration, build and install steps.'
+        );
+      }
+      
       return firebaseAuth;
-    } catch {
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error';
       throw new Error(
-        'Firebase Auth không khả dụng. Vui lòng sử dụng development build hoặc build native app.\n' +
-        'Native module RNFBAppModule not found. Re-check module install, linking, configuration, build and install steps.'
+        `Firebase Auth không khả dụng. Vui lòng sử dụng development build hoặc build native app.\n` +
+        `Lỗi: ${errorMessage}\n` +
+        `Hướng dẫn: Chạy lệnh "npx expo run:android" hoặc "npx expo run:ios" để build development build.`
       );
     }
   }
@@ -86,7 +98,7 @@ export class FirebaseAuthService {
       console.log('Platform:', Platform.OS);
       
       // @react-native-firebase/auth automatically handles reCAPTCHA/Play Integrity
-      const confirmationResult = await authInstance().signInWithPhoneNumber(formattedPhone);
+      const confirmationResult = await authInstance.signInWithPhoneNumber(formattedPhone);
       
       console.log('OTP sent successfully to:', formattedPhone);
       return confirmationResult;
@@ -136,7 +148,7 @@ export class FirebaseAuthService {
         handleCodeInApp: true,
       };
       
-      await authInstance().sendSignInLinkToEmail(email, actionCodeSettings);
+      await authInstance.sendSignInLinkToEmail(email, actionCodeSettings);
       
       // Lưu email vào AsyncStorage để verify sau
       await AsyncStorage.setItem('emailForSignIn', email);
@@ -157,8 +169,8 @@ export class FirebaseAuthService {
       const authInstance = await getFirebaseAuth();
       const email = await AsyncStorage.getItem('emailForSignIn');
       
-      if (email && await authInstance().isSignInWithEmailLink('')) {
-        const result = await authInstance().signInWithEmailLink(email, '');
+      if (email && await authInstance.isSignInWithEmailLink('')) {
+        const result = await authInstance.signInWithEmailLink(email, '');
         await AsyncStorage.removeItem('emailForSignIn');
         return result.user;
       }
@@ -178,7 +190,7 @@ export class FirebaseAuthService {
   static async createAccount(email: string, password: string, displayName: string): Promise<User> {
     try {
       const authInstance = await getFirebaseAuth();
-      const result = await authInstance().createUserWithEmailAndPassword(email, password);
+      const result = await authInstance.createUserWithEmailAndPassword(email, password);
       
       // Cập nhật display name
       await result.user.updateProfile({ displayName });
@@ -202,7 +214,7 @@ export class FirebaseAuthService {
   static async signOutFromFirebase(): Promise<void> {
     try {
       const authInstance = await getFirebaseAuth();
-      await authInstance().signOut();
+      await authInstance.signOut();
     } catch (error) {
       console.log('Error signing out:', error);
       const firebaseError = this.handleAuthError(error as any);
@@ -218,7 +230,7 @@ export class FirebaseAuthService {
   static async isEmailLink(): Promise<boolean> {
     try {
       const authInstance = await getFirebaseAuth();
-      return await authInstance().isSignInWithEmailLink('');
+      return await authInstance.isSignInWithEmailLink('');
     } catch (error) {
       console.log('Error checking email link:', error);
       return false;
