@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from "react";
-import { View, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { usePublicServices } from "@/src/hooks";
+import { Stack, useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import {
-  Searchbar,
   ActivityIndicator,
-  Text,
+  Button,
   Card,
   Chip,
-  Button,
+  Searchbar,
+  Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { usePublicServices } from "@/src/hooks";
-import { useRouter, Stack } from "expo-router";
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -39,16 +39,10 @@ export default function ServicesPage() {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <Text
-        variant="headlineMedium"
-        style={styles.title}
-      >
+      <Text variant="headlineMedium" style={styles.title}>
         Dịch vụ
       </Text>
-      <Text
-        variant="bodyMedium"
-        style={styles.subtitle}
-      >
+      <Text variant="bodyMedium" style={styles.subtitle}>
         Dịch vụ chăm sóc và bảo dưỡng xe chuyên nghiệp
       </Text>
       <Searchbar
@@ -76,18 +70,11 @@ export default function ServicesPage() {
     >
       <Card.Content>
         <View style={styles.serviceHeader}>
-          <Text
-            variant="titleLarge"
-            style={styles.serviceName}
-          >
+          <Text variant="titleLarge" style={styles.serviceName}>
             {item.service_name}
           </Text>
           {item.is_featured && (
-            <Chip
-              icon="star"
-              style={styles.featuredChip}
-              compact
-            >
+            <Chip icon="star" style={styles.featuredChip} compact>
               Nổi bật
             </Chip>
           )}
@@ -105,29 +92,17 @@ export default function ServicesPage() {
 
         <View style={styles.serviceMeta}>
           {item.category_name && (
-            <Chip
-              icon="tag"
-              compact
-              style={styles.metaChip}
-            >
+            <Chip icon="tag" compact style={styles.metaChip}>
               {item.category_name}
             </Chip>
           )}
           {item.service_type_name && (
-            <Chip
-              icon="cog"
-              compact
-              style={styles.metaChip}
-            >
+            <Chip icon="cog" compact style={styles.metaChip}>
               {item.service_type_name}
             </Chip>
           )}
           {item.estimated_duration_minutes && (
-            <Chip
-              icon="clock-outline"
-              compact
-              style={styles.metaChip}
-            >
+            <Chip icon="clock-outline" compact style={styles.metaChip}>
               {item.estimated_duration_minutes} phút
             </Chip>
           )}
@@ -147,16 +122,10 @@ export default function ServicesPage() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text
-        variant="headlineSmall"
-        style={styles.emptyTitle}
-      >
+      <Text variant="headlineSmall" style={styles.emptyTitle}>
         Không tìm thấy dịch vụ
       </Text>
-      <Text
-        variant="bodyMedium"
-        style={styles.emptyText}
-      >
+      <Text variant="bodyMedium" style={styles.emptyText}>
         Thử tìm kiếm với từ khóa khác
       </Text>
     </View>
@@ -172,14 +141,8 @@ export default function ServicesPage() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="large"
-            color="#6C7BEA"
-          />
-          <Text
-            variant="bodyMedium"
-            style={styles.loadingText}
-          >
+          <ActivityIndicator size="large" color="#6C7BEA" />
+          <Text variant="bodyMedium" style={styles.loadingText}>
             Đang tải dịch vụ...
           </Text>
         </View>
@@ -188,34 +151,29 @@ export default function ServicesPage() {
   }
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <Stack.Screen
         options={{
           title: "Dịch vụ",
           headerShown: true,
         }}
       />
-      <SafeAreaView
-        style={styles.container}
-        edges={["top"]}
-      >
-        <FlatList
-          data={filteredServices}
-          renderItem={renderService}
-          keyExtractor={(item) => item.service_id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={["#6C7BEA"]}
-            />
-          }
-        />
-      </SafeAreaView>
-    </>
+      <FlatList
+        data={filteredServices}
+        renderItem={renderService}
+        keyExtractor={(item) => item.service_id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#6C7BEA"]}
+          />
+        }
+      />
+    </SafeAreaView>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useAuth } from "@/src/context/AuthContext";
 import { router } from "expo-router";
 import { Alert, Image, ScrollView, View } from "react-native";
-import { Avatar, Button, Card, Text } from "react-native-paper";
+import { Avatar, Button, Card, Divider, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
@@ -129,13 +129,23 @@ export default function ProfileScreen() {
   const initials = getInitials(fullName);
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["top", "bottom"]}
+    >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 8, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        <Card style={{ marginBottom: 16 }}>
+        {/* Personal Information */}
+        <Card
+          style={{
+            marginBottom: 8,
+            borderRadius: 4,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Content>
             <View
               style={{
@@ -173,113 +183,151 @@ export default function ProfileScreen() {
             </View>
           </Card.Content>
         </Card>
-        <Card style={{ marginBottom: 16 }}>
-          <Card.Title
-            title="Tài khoản"
-            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
-          />
-          <Card.Content>
-            <View>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                textColor="#151515"
-                icon="account"
-                onPress={() => router.push("/personal/personal")}
-              >
-                Thông tin tài khoản
-              </Button>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                icon="lock"
-                textColor="#151515"
-                onPress={() => router.push("/auths/password-management")}
-              >
-                Đổi mật khẩu
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-        <Card style={{ marginBottom: 16 }}>
-          <Card.Title
-            title="Quản lý xe"
-            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
-          />
-          <Card.Content>
-            <View>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                textColor="#151515"
-                icon="plus"
-                onPress={() =>
-                  router.push("/vehicle-management/vehicle-addition")
-                }
-              >
-                Thêm xe mới
-              </Button>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                icon="car-outline"
-                textColor="#151515"
-                onPress={() => router.push("/vehicle-management/vehicle-list")}
-              >
-                Danh sách xe
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-        <Card style={{ marginBottom: 16 }}>
-          <Card.Title
-            title="Quá trình chăm sóc"
-            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
-          />
-          <Card.Content>
-            <View>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                icon="wrench-outline"
-                textColor="#151515"
-                onPress={() =>
-                  router.push("/history-management/care-history/care-history")
-                }
-              >
-                Theo dõi quá trình chăm sóc
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-        <Card style={{ marginBottom: 16 }}>
-          <Card.Title
-            title="Lịch sử"
-            titleStyle={{ color: "#6C7BEA", fontWeight: "bold" }}
-          />
-          <Card.Content>
-            <View>
-              <Button
-                mode="text"
-                style={{ alignItems: "flex-start" }}
-                textColor="#151515"
-                icon="calendar-outline"
-                onPress={() =>
-                  router.push(
-                    "/history-management/booking-history/booking-history"
-                  )
-                }
-              >
-                Lịch sử đặt lịch
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
+        {/* Account Management */}
+        <View
+          style={{
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+            paddingTop: 10,
+            paddingLeft: 10,
+            paddingRight: 10,
+            borderRadius: 4,
+            width: "100%",
+          }}
+        >
+          <Text
+            variant="labelSmall"
+            style={{ fontWeight: "bold", color: "#666" }}
+          >
+            Quản lý tài khoản và thông tin cá nhân
+          </Text>
+          <Button
+            mode="text"
+            style={{
+              alignItems: "flex-start",
+              padding: 4,
+              width: "100%",
+              borderRadius: 0,
+            }}
+            textColor="#151515"
+            icon="account"
+            onPress={() => router.push("/personal/personal")}
+          >
+            Thông tin tài khoản
+          </Button>
+          <Divider />
+          <Button
+            mode="text"
+            style={{ alignItems: "flex-start", padding: 4, width: "100%" }}
+            icon="lock"
+            textColor="#151515"
+            onPress={() => router.push("/auths/password-management")}
+          >
+            Đổi mật khẩu
+          </Button>
+        </View>
+
+        {/* Vehicle Management */}
+        <View
+          style={{
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+            paddingTop: 10,
+            paddingLeft: 10,
+            paddingRight: 10,
+            borderRadius: 4,
+          }}
+        >
+          <Text
+            variant="labelSmall"
+            style={{ fontWeight: "bold", color: "#666" }}
+          >
+            Quản lý xe
+          </Text>
+          <Button
+            mode="text"
+            style={{ alignItems: "flex-start", padding: 4, width: "100%" }}
+            textColor="#151515"
+            icon="plus"
+            onPress={() => router.push("/vehicle-management/vehicle-addition")}
+          >
+            Thêm xe mới
+          </Button>
+          <Divider />
+          <Button
+            mode="text"
+            style={{ alignItems: "flex-start", padding: 4, width: "100%" }}
+            icon="car-outline"
+            textColor="#151515"
+            onPress={() => router.push("/vehicle-management/vehicle-list")}
+          >
+            Danh sách xe
+          </Button>
+        </View>
+
+        {/* Care History */}
+        <View
+          style={{
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+            paddingTop: 10,
+            paddingLeft: 10,
+            paddingRight: 10,
+            borderRadius: 4,
+          }}
+        >
+          <Text
+            variant="labelSmall"
+            style={{ fontWeight: "bold", color: "#666" }}
+          >
+            Quá trình chăm sóc
+          </Text>
+          <Button
+            mode="text"
+            style={{ alignItems: "flex-start", padding: 4, width: "100%" }}
+            icon="wrench-outline"
+            textColor="#151515"
+            onPress={() =>
+              router.push("/history-management/care-history/care-history")
+            }
+          >
+            Theo dõi quá trình chăm sóc
+          </Button>
+        </View>
+
+        <View
+          style={{
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+            paddingTop: 10,
+            paddingLeft: 10,
+            paddingRight: 10,
+            borderRadius: 4,
+          }}
+        >
+          <Text
+            variant="labelSmall"
+            style={{ fontWeight: "bold", color: "#666" }}
+          >
+            Lịch sử
+          </Text>
+          <Button
+            mode="text"
+            style={{ alignItems: "flex-start", padding: 4, width: "100%" }}
+            textColor="#151515"
+            icon="calendar-outline"
+            onPress={() =>
+              router.push("/history-management/booking-history/booking-history")
+            }
+          >
+            Lịch sử đặt lịch
+          </Button>
+        </View>
 
         <Button
           mode="outlined"
           onPress={handleLogout}
-          style={{ width: "100%", marginTop: 8 }}
+          style={{ width: "100%", marginTop: 16, borderWidth: 0 }}
           buttonColor="#ffebee"
           textColor="#d32f2f"
         >

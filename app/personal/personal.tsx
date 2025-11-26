@@ -134,7 +134,7 @@ export default function PersonalScreen() {
     }
 
     // Nếu URI là từ server (http/https), chỉ cập nhật state
-    if (newUri.startsWith('http://') || newUri.startsWith('https://')) {
+    if (newUri.startsWith("http://") || newUri.startsWith("https://")) {
       setAvatarUri(newUri);
       return;
     }
@@ -204,7 +204,7 @@ export default function PersonalScreen() {
       // Lấy avatar_url từ user context (đã được cập nhật sau khi upload)
       // Nếu avatarUri vẫn là local URI, có nghĩa là chưa upload thành công, sử dụng avatar cũ
       const currentAvatarUrl = user?.avatar_url ?? avatarUri ?? "";
-      
+
       await updateUser({
         full_name: fullName.trim(),
         phone_number: phone.trim() || "",
@@ -232,11 +232,18 @@ export default function PersonalScreen() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
-      edges={["top", "bottom"]}
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        <Card mode="elevated" style={{ marginBottom: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 8 }}>
+        <Card
+          mode="elevated"
+          style={{
+            marginBottom: 8,
+            borderRadius: 4,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Content style={{ alignItems: "center", paddingVertical: 20 }}>
             <AvatarCustom
               uri={avatarUri}
@@ -245,7 +252,13 @@ export default function PersonalScreen() {
               onChange={handleAvatarChange}
             />
             {uploadingAvatar && (
-              <Text style={{ marginTop: 8, fontSize: 12, color: theme.colors.primary }}>
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: theme.colors.primary,
+                }}
+              >
                 Đang tải ảnh lên...
               </Text>
             )}
@@ -255,7 +268,14 @@ export default function PersonalScreen() {
           </Card.Content>
         </Card>
 
-        <Card mode="elevated" style={{ marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            marginBottom: 8,
+            borderRadius: 4,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <List.Subheader>Thông tin cá nhân</List.Subheader>
           <Divider />
           <Card.Content>
@@ -352,7 +372,14 @@ export default function PersonalScreen() {
           </Card.Content>
         </Card>
 
-        <Card mode="elevated" style={{ marginBottom: 24 }}>
+        <Card
+          mode="elevated"
+          style={{
+            marginBottom: 8,
+            borderRadius: 4,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <List.Subheader>Liên hệ</List.Subheader>
           <Divider />
           <Card.Content>
@@ -406,8 +433,8 @@ export default function PersonalScreen() {
           left: 0,
           right: 0,
           bottom: 0,
-          padding: 16,
-          backgroundColor: theme.colors.background,
+          padding: 8,
+          backgroundColor: "#F9F8F6",
           borderTopWidth: 1,
           borderTopColor: "#e5e7eb",
         }}

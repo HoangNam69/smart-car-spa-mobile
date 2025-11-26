@@ -1,7 +1,13 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Platform, ScrollView, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -24,12 +30,29 @@ import {
   bookingScheduleService,
   SlotInfo,
 } from "../../../../src/services/bookingSchedule.service";
-import { BranchDisplay, branchService } from "../../../../src/services/branch.service";
-import { PriceBookItem, pricingService } from "../../../../src/services/pricing.service";
+import {
+  BranchDisplay,
+  branchService,
+} from "../../../../src/services/branch.service";
+import {
+  PriceBookItem,
+  pricingService,
+} from "../../../../src/services/pricing.service";
 import { enrichServicesWithInventory } from "../../../../src/services/service-inventory.service";
-import { ServiceBay, serviceBayService } from "../../../../src/services/serviceBay.service";
-import { VehicleProfileDto, vehicleProfileService } from "../../../../src/services/vehicleProfile.service";
-import { BookingInfoDto, BookingType, CreateBookingItemRequest, UpdateBookingRequest } from "../../../../src/types/booking.types";
+import {
+  ServiceBay,
+  serviceBayService,
+} from "../../../../src/services/serviceBay.service";
+import {
+  VehicleProfileDto,
+  vehicleProfileService,
+} from "../../../../src/services/vehicleProfile.service";
+import {
+  BookingInfoDto,
+  BookingType,
+  CreateBookingItemRequest,
+  UpdateBookingRequest,
+} from "../../../../src/types/booking.types";
 import { Service, SkillLevel } from "../../../../src/types/service.types";
 
 interface SelectedSlot {
@@ -97,8 +120,11 @@ export default function UpdateBookingScreen() {
   const [booking, setBooking] = useState<BookingInfoDto | null>(null);
 
   // Selection states
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleProfileDto | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(null);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<VehicleProfileDto | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
+    null
+  );
   const [selectedItems, setSelectedItems] = useState<PriceBookItem[]>([]);
   const [originalItems, setOriginalItems] = useState<PriceBookItem[]>([]); // Store original services from initialData
   const [originalTotalDuration, setOriginalTotalDuration] = useState<number>(0);
@@ -111,7 +137,8 @@ export default function UpdateBookingScreen() {
   const [bookingDate, setBookingDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
-  const [timeRangesData, setTimeRangesData] = useState<AvailableTimeRangesResponse | null>(null);
+  const [timeRangesData, setTimeRangesData] =
+    useState<AvailableTimeRangesResponse | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [notes, setNotes] = useState("");
   const [snackbar, setSnackbar] = useState<{
@@ -123,8 +150,12 @@ export default function UpdateBookingScreen() {
   // Dropdown data
   const [userVehicles, setUserVehicles] = useState<VehicleProfileDto[]>([]);
   const [branches, setBranches] = useState<BranchDisplay[]>([]);
-  const [allPriceBookServices, setAllPriceBookServices] = useState<PriceBookItem[]>([]); // Store all services from pricing
-  const [availableServices, setAvailableServices] = useState<PriceBookItem[]>([]); // Filtered services based on inventory
+  const [allPriceBookServices, setAllPriceBookServices] = useState<
+    PriceBookItem[]
+  >([]); // Store all services from pricing
+  const [availableServices, setAvailableServices] = useState<PriceBookItem[]>(
+    []
+  ); // Filtered services based on inventory
   const [serviceBays, setServiceBays] = useState<ServiceBay[]>([]);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
@@ -138,7 +169,10 @@ export default function UpdateBookingScreen() {
 
   // Calculate totals
   const { totalPrice, totalDuration } = useMemo(() => {
-    const price = selectedItems.reduce((sum, item) => sum + (item.fixed_price || 0), 0);
+    const price = selectedItems.reduce(
+      (sum, item) => sum + (item.fixed_price || 0),
+      0
+    );
     const duration = selectedItems.reduce((sum, item) => {
       if (item.service) {
         return sum + (item.service.estimated_duration || 60);
@@ -156,7 +190,11 @@ export default function UpdateBookingScreen() {
       // Load booking
       const bookingDataRaw = await bookingService.getBookingById(bookingId);
       if (!bookingDataRaw) {
-        setSnackbar({ visible: true, message: "Không tìm thấy booking", error: true });
+        setSnackbar({
+          visible: true,
+          message: "Không tìm thấy booking",
+          error: true,
+        });
         setLoading(false);
         return;
       }
@@ -167,7 +205,9 @@ export default function UpdateBookingScreen() {
 
       // Load dropdown data
       const [vehicles, branchesData, servicesData] = await Promise.all([
-        vehicleProfileService.getByOwner(user.user_id, { size: 1000 }).then(r => r.content || []),
+        vehicleProfileService
+          .getByOwner(user.user_id, { size: 1000 })
+          .then((r) => r.content || []),
         branchService.getAll(),
         pricingService.getAllItems(),
       ]);
@@ -179,13 +219,17 @@ export default function UpdateBookingScreen() {
 
       // Set selected vehicle - try multiple ways to find vehicle
       if (bookingData.vehicle_id) {
-        const vehicle = vehicles.find((v) => v.vehicle_id === bookingData.vehicle_id);
+        const vehicle = vehicles.find(
+          (v) => v.vehicle_id === bookingData.vehicle_id
+        );
         if (vehicle) {
           setSelectedVehicle(vehicle);
         }
       } else if (bookingData.vehicle_license_plate) {
         // Fallback: try to find by license plate
-        const vehicle = vehicles.find((v) => v.license_plate === bookingData.vehicle_license_plate);
+        const vehicle = vehicles.find(
+          (v) => v.license_plate === bookingData.vehicle_license_plate
+        );
         if (vehicle) {
           setSelectedVehicle(vehicle);
         }
@@ -194,7 +238,9 @@ export default function UpdateBookingScreen() {
       // Set selected branch
       let selectedBranchData: BranchDisplay | null = null;
       if (bookingData.branch_id) {
-        const branch = branchesData.find((b) => b.branch_id === bookingData.branch_id);
+        const branch = branchesData.find(
+          (b) => b.branch_id === bookingData.branch_id
+        );
         if (branch) {
           selectedBranchData = branch;
           setSelectedBranch(branch);
@@ -203,12 +249,12 @@ export default function UpdateBookingScreen() {
 
       // Set booking date - handle multiple date fields
       // Normalize date to local timezone at midnight to avoid display issues
-      const parsedDate = bookingData.scheduled_start_at 
+      const parsedDate = bookingData.scheduled_start_at
         ? parseAndNormalizeDate(bookingData.scheduled_start_at)
         : bookingData.preferred_start_at
         ? parseAndNormalizeDate(bookingData.preferred_start_at)
         : null;
-      
+
       if (parsedDate) {
         setBookingDate(parsedDate);
       }
@@ -219,63 +265,51 @@ export default function UpdateBookingScreen() {
         const seenServiceIds = new Set<string>();
 
         bookingData.booking_items.forEach((item) => {
-          console.log(" Processing booking item:", {
-            service_id: item.service_id,
-            service_name: item.service_name,
-          });
-
           // Primary: Try to match by service_id
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
             const priceBookItem = servicesData.find(
               (s) => s.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log(" Found matching service by service_id:", {
-                item_id: priceBookItem.item_id,
-                item_name: priceBookItem.item_name,
-                service: priceBookItem.service,
-              });
               services.push(priceBookItem);
               seenServiceIds.add(item.service_id);
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.warn(" Service not found by service_id:", item.service_id);
+              console.warn(
+                " Service not found by service_id:",
+                item.service_id
+              );
             }
           } else if (!item.service_id && item.service_name) {
             // Fallback: Try to match by service_name if service_id is null
-            console.log(" service_id is null, trying to match by service_name:", item.service_name);
+            console.log(
+              " service_id is null, trying to match by service_name:",
+              item.service_name
+            );
             const priceBookItem = servicesData.find(
-              (s) => s.item_name === item.service_name && s.service && !seenServiceIds.has(s.item_id)
+              (s) =>
+                s.item_name === item.service_name &&
+                s.service &&
+                !seenServiceIds.has(s.item_id)
             );
             if (priceBookItem) {
-              console.log(" Found matching service by service_name:", {
-                item_id: priceBookItem.item_id,
-                item_name: priceBookItem.item_name,
-                service_id: priceBookItem.service?.service_id,
-              });
               services.push(priceBookItem);
               if (priceBookItem.service?.service_id) {
                 seenServiceIds.add(priceBookItem.service.service_id);
               }
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.warn(" Service not found by service_name:", item.service_name);
+              console.warn(
+                " Service not found by service_name:",
+                item.service_name
+              );
             }
           }
         });
 
-        const uniqueServices = services.filter((s, i, self) =>
-          i === self.findIndex((sv) => sv.item_id === s.item_id)
+        const uniqueServices = services.filter(
+          (s, i, self) => i === self.findIndex((sv) => sv.item_id === s.item_id)
         );
-
-        console.log(" Final services array:", {
-          originalCount: bookingData.booking_items.length,
-          uniqueCount: uniqueServices.length,
-          services: uniqueServices.map((s) => ({
-            item_name: s.item_name,
-            service_id: s.service?.service_id,
-          })),
-        });
 
         if (uniqueServices.length > 0) {
           setSelectedItems(uniqueServices);
@@ -305,14 +339,19 @@ export default function UpdateBookingScreen() {
       // Load service bays for selected branch and set bay/slot
       if (selectedBranchData) {
         try {
-          const bays = await serviceBayService.getActive(selectedBranchData.branch_id);
-          const filteredBays = bays.filter((bay) => bay.allow_booking !== false);
+          const bays = await serviceBayService.getActive(
+            selectedBranchData.branch_id
+          );
+          const filteredBays = bays.filter(
+            (bay) => bay.allow_booking !== false
+          );
           setServiceBays(filteredBays);
 
           // Set bay for both slot and walk-in bookings
           if (bookingData.bay_id) {
-            const bay = filteredBays.find((b) => b.bay_id === bookingData.bay_id) || 
-                        bays.find((b) => b.bay_id === bookingData.bay_id);
+            const bay =
+              filteredBays.find((b) => b.bay_id === bookingData.bay_id) ||
+              bays.find((b) => b.bay_id === bookingData.bay_id);
             if (bay) {
               setSelectedBay(bay);
               console.log(" Set selected bay:", bay.bay_name);
@@ -322,26 +361,38 @@ export default function UpdateBookingScreen() {
           // Set slot for slot bookings (SCHEDULED bookings with scheduled_start_at)
           // Use detectBookingType helper function for consistency
           const { isSlot: isSlotBooking } = detectBookingType(bookingData);
-          if (isSlotBooking && bookingData.bay_id && bookingData.scheduled_start_at) {
-            const bay = filteredBays.find((b) => b.bay_id === bookingData.bay_id) || 
-                        bays.find((b) => b.bay_id === bookingData.bay_id);
+          if (
+            isSlotBooking &&
+            bookingData.bay_id &&
+            bookingData.scheduled_start_at
+          ) {
+            const bay =
+              filteredBays.find((b) => b.bay_id === bookingData.bay_id) ||
+              bays.find((b) => b.bay_id === bookingData.bay_id);
             if (bay) {
-              const slotDate = parseAndNormalizeDate(bookingData.scheduled_start_at);
+              const slotDate = parseAndNormalizeDate(
+                bookingData.scheduled_start_at
+              );
               if (slotDate) {
                 // Extract time from scheduled_start_at (format: YYYY-MM-DDTHH:mm:ss or ISO string)
                 const scheduledStart = new Date(bookingData.scheduled_start_at);
                 const hours = scheduledStart.getHours();
                 const minutes = scheduledStart.getMinutes();
-                const startTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-                
-                const serviceDuration = bookingData.estimated_duration_minutes || 60;
+                const startTime = `${String(hours).padStart(2, "0")}:${String(
+                  minutes
+                ).padStart(2, "0")}`;
+
+                const serviceDuration =
+                  bookingData.estimated_duration_minutes || 60;
                 // Calculate end time
                 const startMinutes = hours * 60 + minutes;
                 const endMinutes = startMinutes + serviceDuration;
                 const endHours = Math.floor(endMinutes / 60);
                 const endMins = endMinutes % 60;
-                const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
-                
+                const endTime = `${String(endHours).padStart(2, "0")}:${String(
+                  endMins
+                ).padStart(2, "0")}`;
+
                 const slot: SelectedSlot = {
                   time: startTime,
                   endTime: endTime,
@@ -363,7 +414,11 @@ export default function UpdateBookingScreen() {
       isInitialized.current = true;
     } catch (e: any) {
       console.error("Error loading booking data:", e);
-      setSnackbar({ visible: true, message: e?.message || "Không thể tải dữ liệu", error: true });
+      setSnackbar({
+        visible: true,
+        message: e?.message || "Không thể tải dữ liệu",
+        error: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -396,13 +451,19 @@ export default function UpdateBookingScreen() {
   };
 
   // Helper function to parse date from ISO string and normalize to local timezone at midnight
-  const parseAndNormalizeDate = (dateString: string | undefined | null): Date | null => {
+  const parseAndNormalizeDate = (
+    dateString: string | undefined | null
+  ): Date | null => {
     if (!dateString) return null;
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return null;
       // Normalize to local timezone at midnight to avoid timezone shift issues
-      const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const normalizedDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
       return normalizedDate;
     } catch {
       return null;
@@ -509,11 +570,12 @@ export default function UpdateBookingScreen() {
       serviceBayService.getActive(selectedBranch.branch_id).then((bays) => {
         const filteredBays = bays.filter((bay) => bay.allow_booking !== false);
         setServiceBays(filteredBays);
-        
+
         // If bay was not set during initialization, try to set it now
         if (booking?.bay_id) {
-          const bay = filteredBays.find((b) => b.bay_id === booking.bay_id) || 
-                      bays.find((b) => b.bay_id === booking.bay_id);
+          const bay =
+            filteredBays.find((b) => b.bay_id === booking.bay_id) ||
+            bays.find((b) => b.bay_id === booking.bay_id);
           if (bay) {
             setSelectedBay(bay);
             // Original slot will be restored in the useEffect that watches availableSlots
@@ -535,16 +597,17 @@ export default function UpdateBookingScreen() {
       setLoadingSlots(true);
       try {
         const dateStr = formatDateString(bookingDate);
-        
+
         // Get available time ranges from backend
-        const timeRangesResp = await bookingScheduleService.getAvailableTimeRanges({
-          bay_id: selectedBay.bay_id,
-          date: dateStr,
-          duration_minutes: Math.max(duration, 30),
-        });
-        
+        const timeRangesResp =
+          await bookingScheduleService.getAvailableTimeRanges({
+            bay_id: selectedBay.bay_id,
+            date: dateStr,
+            duration_minutes: Math.max(duration, 30),
+          });
+
         setTimeRangesData(timeRangesResp);
-        
+
         // Convert time ranges to slots for UI display
         const convertedSlots = bookingScheduleService.convertTimeRangesToSlots(
           timeRangesResp.available_time_ranges,
@@ -552,30 +615,38 @@ export default function UpdateBookingScreen() {
           Math.max(duration, 30),
           30 // 30-minute intervals
         );
-        
+
         setAvailableSlots(convertedSlots);
       } catch (error: any) {
         console.error("Error loading slots:", error);
         console.error("Error response:", error?.response?.data);
         setAvailableSlots([]);
         setTimeRangesData(null);
-        
+
         // Extract error message from backend response
-        const errorMessage = 
-          error?.response?.data?.message || 
-          error?.response?.data?.error || 
-          error?.message || 
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
           "Không thể tải khung giờ";
-        
+
         // Check if it's a branch closed error
         const errorMessageUpper = errorMessage.toUpperCase();
         if (
-          errorMessageUpper.includes("CLOSED") || 
-          errorMessageUpper.includes("ĐÓNG CỬA") || 
+          errorMessageUpper.includes("CLOSED") ||
+          errorMessageUpper.includes("ĐÓNG CỬA") ||
           errorMessageUpper.includes("BRANCH_CLOSED") ||
           errorMessageUpper.includes("IS CLOSED")
         ) {
-          const dayNames = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+          const dayNames = [
+            "Chủ nhật",
+            "Thứ hai",
+            "Thứ ba",
+            "Thứ tư",
+            "Thứ năm",
+            "Thứ sáu",
+            "Thứ bảy",
+          ];
           const selectedDay = dayNames[bookingDate.getDay()];
           setSnackbar({
             visible: true,
@@ -607,7 +678,13 @@ export default function UpdateBookingScreen() {
       // Clear slots if dependencies are not met
       setAvailableSlots([]);
     }
-  }, [loadAvailableSlots, totalDuration, selectedBranch, selectedBay, bookingDate]);
+  }, [
+    loadAvailableSlots,
+    totalDuration,
+    selectedBranch,
+    selectedBay,
+    bookingDate,
+  ]);
 
   // Validate selected slot after available slots are loaded
   // Also restore original slot if we're back on the original bay and date
@@ -620,11 +697,15 @@ export default function UpdateBookingScreen() {
       // 3. No slot is currently selected
       const isOriginalBay = booking?.bay_id === selectedBay.bay_id;
       // Extract time from scheduled_start_at (format: "2024-01-01T08:00:00" -> "08:00")
-      const bookingStartTime = booking?.scheduled_start_at 
-        ? new Date(booking.scheduled_start_at).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })
+      const bookingStartTime = booking?.scheduled_start_at
+        ? new Date(booking.scheduled_start_at).toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+          })
         : null;
       const isOriginalDate = bookingStartTime === originalSlot.time;
-      
+
       if (isOriginalBay && isOriginalDate && !selectedSlot) {
         // Restore original slot if on original bay and date
         setSelectedSlot(originalSlot);
@@ -634,10 +715,10 @@ export default function UpdateBookingScreen() {
         const slotStillValid = availableSlots.some(
           (slot) => slot.time === selectedSlot.time && slot.isAvailable
         );
-        
+
         // Check if this is the original slot
         const isOriginalSlot = originalSlot.time === selectedSlot.time;
-        
+
         // If slot is no longer valid and it's not the original slot, reset it
         if (!slotStillValid && !isOriginalSlot) {
           setSelectedSlot(null);
@@ -648,14 +729,21 @@ export default function UpdateBookingScreen() {
         }
       }
     }
-  }, [availableSlots, selectedSlot, selectedBay, originalSlot, bookingDate, booking]);
+  }, [
+    availableSlots,
+    selectedSlot,
+    selectedBay,
+    originalSlot,
+    bookingDate,
+    booking,
+  ]);
 
   // Calculate original slot time from scheduled_start_at and scheduled_end_at (actual time range)
   const calculateOriginalSlotTime = useCallback(() => {
     if (!booking) return null;
-    
+
     const { isSlot: isSlotBooking } = detectBookingType(booking);
-    
+
     if (!isSlotBooking) {
       return null;
     }
@@ -664,8 +752,10 @@ export default function UpdateBookingScreen() {
     if (booking.scheduled_start_at && booking.scheduled_end_at) {
       const startTime = new Date(booking.scheduled_start_at);
       const endTime = new Date(booking.scheduled_end_at);
-      const diffMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-      
+      const diffMinutes = Math.round(
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+      );
+
       if (diffMinutes > 0) {
         return diffMinutes;
       }
@@ -685,14 +775,15 @@ export default function UpdateBookingScreen() {
   // For walk-in booking: Compare with total duration of original services
   const isDurationExceedsOriginal = useMemo(() => {
     if (!booking) return false;
-    
+
     // Use detectBookingType helper function for consistency
-    const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } = detectBookingType(booking);
-    
+    const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } =
+      detectBookingType(booking);
+
     if (isSlotBooking) {
       // For slot booking: Compare with actual time range from scheduled_start_at and scheduled_end_at
       const totalOriginalSlotTime = calculateOriginalSlotTime();
-      
+
       if (totalOriginalSlotTime && totalOriginalSlotTime > 0) {
         return totalDuration > totalOriginalSlotTime;
       }
@@ -700,22 +791,27 @@ export default function UpdateBookingScreen() {
       // For walk-in booking: Compare with total duration of original services
       return totalDuration > originalTotalDuration;
     }
-    
+
     return false;
-  }, [totalDuration, originalTotalDuration, booking, calculateOriginalSlotTime]);
+  }, [
+    totalDuration,
+    originalTotalDuration,
+    booking,
+    calculateOriginalSlotTime,
+  ]);
 
   // Check if slot is suitable
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
       if (!slot.isAvailable) return false;
-      
+
       // Calculate end time for this slot
       const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
       const slotEndMinutes = slotStartMinutes + totalDuration;
-      
+
       // Check if slot fits within any available time range
       if (!timeRangesData) return false;
-      
+
       return timeRangesData.available_time_ranges.some((range) => {
         const rangeStart = bookingScheduleService.parseTime(range.start_time);
         const rangeEnd = bookingScheduleService.parseTime(range.end_time);
@@ -723,7 +819,10 @@ export default function UpdateBookingScreen() {
         // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
         // We allow a small tolerance (1 minute) for rounding differences
         const TOLERANCE_MINUTES = 1;
-        return slotStartMinutes >= rangeStart && slotEndMinutes <= (rangeEnd + TOLERANCE_MINUTES);
+        return (
+          slotStartMinutes >= rangeStart &&
+          slotEndMinutes <= rangeEnd + TOLERANCE_MINUTES
+        );
       });
     },
     [timeRangesData, totalDuration]
@@ -746,7 +845,7 @@ export default function UpdateBookingScreen() {
         const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
         const slotEndMinutes = slotStartMinutes + Math.max(totalDuration, 30);
         const endTime = bookingScheduleService.formatTime(slotEndMinutes);
-        
+
         const newSlot: SelectedSlot = {
           time: slot.time,
           endTime: endTime,
@@ -764,7 +863,7 @@ export default function UpdateBookingScreen() {
   // Helper function to build booking_items array for API
   const buildBookingItemsArray = useCallback((): CreateBookingItemRequest[] => {
     const bookingItems: CreateBookingItemRequest[] = [];
-    
+
     // Get service IDs from original and selected items
     const originalServiceIds = new Set(
       originalItems
@@ -827,7 +926,6 @@ export default function UpdateBookingScreen() {
           service_name: item.item_name,
         });
       }
-
     });
 
     console.log(" Final booking_items array:", bookingItems);
@@ -837,15 +935,24 @@ export default function UpdateBookingScreen() {
   // Handle submit
   const handleSubmit = async () => {
     if (!booking || !selectedBranch || !selectedVehicle) {
-      setSnackbar({ visible: true, message: "Vui lòng điền đầy đủ thông tin", error: true });
+      setSnackbar({
+        visible: true,
+        message: "Vui lòng điền đầy đủ thông tin",
+        error: true,
+      });
       return;
     }
 
     // Determine booking type with fallback to booking_code (similar to web app)
-    const { isWalkIn: isWalkInBooking, isSlot: isSlotBooking } = detectBookingType(booking);
-    
+    const { isWalkIn: isWalkInBooking, isSlot: isSlotBooking } =
+      detectBookingType(booking);
+
     if (isSlotBooking && !selectedSlot) {
-      setSnackbar({ visible: true, message: "Vui lòng chọn slot cho lịch đặt slot booking", error: true });
+      setSnackbar({
+        visible: true,
+        message: "Vui lòng chọn slot cho lịch đặt slot booking",
+        error: true,
+      });
       return;
     }
 
@@ -922,10 +1029,9 @@ export default function UpdateBookingScreen() {
       // Format date string directly from date components to avoid timezone issues
       // toISOString() can cause date shift when converting to UTC
       const dateStr = formatDateString(bookingDate);
-      
+
       // Build booking_items array for API
       const bookingItems = buildBookingItemsArray();
-      
 
       const updateRequest: UpdateBookingRequest = {
         vehicle_license_plate: selectedVehicle.license_plate,
@@ -959,21 +1065,25 @@ export default function UpdateBookingScreen() {
         updateRequest.schedule_date = dateStr; // YYYY-MM-DD format
         updateRequest.schedule_start_time = selectedSlot.time; // HH:mm format
         // DO NOT send scheduled_start_at and scheduled_end_at - backend will calculate from schedule_date and schedule_start_time
-      } 
+      }
 
       await bookingService.updateBooking(bookingId, updateRequest);
-      setSnackbar({ visible: true, message: "Cập nhật booking thành công!", error: false });
+      setSnackbar({
+        visible: true,
+        message: "Cập nhật booking thành công!",
+        error: false,
+      });
       setTimeout(() => {
         router.back();
       }, 1500);
     } catch (e: any) {
       // Extract error message from backend response
-      const errorMessage = 
-        e?.response?.data?.message || 
-        e?.response?.data?.error || 
-        e?.message || 
+      const errorMessage =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
         "Cập nhật booking thất bại";
-      
+
       setSnackbar({ visible: true, message: errorMessage, error: true });
     } finally {
       setSubmitting(false);
@@ -999,8 +1109,13 @@ export default function UpdateBookingScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
+        edges={["bottom"]}
+      >
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
           <ActivityIndicator />
           <Text style={{ marginTop: 8 }}>Đang tải thông tin booking...</Text>
         </View>
@@ -1009,65 +1124,120 @@ export default function UpdateBookingScreen() {
   }
 
   if (!booking) {
-  return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
+        edges={["bottom"]}
+      >
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
           <Text>Không tìm thấy booking</Text>
           <Button style={{ marginTop: 12 }} onPress={() => router.back()}>
             Quay lại
           </Button>
-      </View>
-    </SafeAreaView>
-  );
-}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Use detectBookingType helper function for consistency
   const { isSlot: isSlotBooking } = detectBookingType(booking);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }} edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
+    >
+      <ScrollView contentContainerStyle={{ padding: 8, paddingBottom: 32 }}>
         {/* Booking Info */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Thông tin booking" />
           <Divider />
           <Card.Content>
             <View style={{ marginTop: 12 }}>
               <Text style={{ color: "#6b7280", fontSize: 12 }}>Mã booking</Text>
-              <Text style={{ fontFamily: "monospace", fontSize: 16, fontWeight: "600", marginTop: 4 }}>
+              <Text
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: 16,
+                  fontWeight: "600",
+                  marginTop: 4,
+                }}
+              >
                 {booking.booking_code}
               </Text>
             </View>
-            <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ color: "#6b7280", fontSize: 12, marginRight: 8 }}>Trạng thái:</Text>
+            <View
+              style={{
+                marginTop: 12,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#6b7280", fontSize: 12, marginRight: 8 }}>
+                Trạng thái:
+              </Text>
               <Chip
-                style={{ backgroundColor: getStatusColor(booking.status) + "20" }}
-                textStyle={{ color: getStatusColor(booking.status), fontSize: 12 }}
+                style={{
+                  backgroundColor: getStatusColor(booking.status) + "20",
+                }}
+                textStyle={{
+                  color: getStatusColor(booking.status),
+                  fontSize: 12,
+                }}
               >
                 {booking.status}
               </Chip>
             </View>
             {booking.branch_name && (
               <View style={{ marginTop: 12 }}>
-                <Text style={{ color: "#6b7280", fontSize: 12 }}>Chi nhánh hiện tại</Text>
-                <Text style={{ fontSize: 14, marginTop: 4 }}>{booking.branch_name}</Text>
+                <Text style={{ color: "#6b7280", fontSize: 12 }}>
+                  Chi nhánh hiện tại
+                </Text>
+                <Text style={{ fontSize: 14, marginTop: 4 }}>
+                  {booking.branch_name}
+                </Text>
               </View>
             )}
           </Card.Content>
         </Card>
 
         {/* Customer Info (Read-only) */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Thông tin khách hàng" />
           <Divider />
           <Card.Content>
             <View style={{ marginTop: 12 }}>
               <Text style={{ color: "#6b7280", fontSize: 12 }}>Tên</Text>
-              <Text style={{ fontSize: 14, marginTop: 4 }}>{user?.full_name || booking.customer_name}</Text>
+              <Text style={{ fontSize: 14, marginTop: 4 }}>
+                {user?.full_name || booking.customer_name}
+              </Text>
             </View>
             <View style={{ marginTop: 12 }}>
               <Text style={{ color: "#6b7280", fontSize: 12 }}>SĐT</Text>
-              <Text style={{ fontSize: 14, marginTop: 4 }}>{user?.phone_number || booking.customer_phone}</Text>
+              <Text style={{ fontSize: 14, marginTop: 4 }}>
+                {user?.phone_number || booking.customer_phone}
+              </Text>
             </View>
             {user?.email && (
               <View style={{ marginTop: 12 }}>
@@ -1079,23 +1249,44 @@ export default function UpdateBookingScreen() {
         </Card>
 
         {/* Vehicle Selection */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Thông tin xe" />
           <Divider />
           <Card.Content>
             <List.Item
               title="Chọn xe"
-              description={selectedVehicle ? selectedVehicle.license_plate : "Chọn xe của bạn"}
+              description={
+                selectedVehicle
+                  ? selectedVehicle.license_plate
+                  : "Chọn xe của bạn"
+              }
               left={(props) => <List.Icon {...props} icon="car" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => setVehicleModal(true)}
               style={{ paddingHorizontal: 0 }}
             />
             {selectedVehicle && (
-              <View style={{ marginTop: 8, padding: 12, backgroundColor: "#E3F2FD", borderRadius: 8 }}>
-                <Text style={{ fontWeight: "600" }}>{selectedVehicle.license_plate}</Text>
+              <View
+                style={{
+                  marginTop: 8,
+                  padding: 12,
+                  backgroundColor: "#E3F2FD",
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ fontWeight: "600" }}>
+                  {selectedVehicle.license_plate}
+                </Text>
                 <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                  {selectedVehicle.brand_name} {selectedVehicle.model_name} • {selectedVehicle.type_name}
+                  {selectedVehicle.brand_name} {selectedVehicle.model_name} •{" "}
+                  {selectedVehicle.type_name}
                 </Text>
               </View>
             )}
@@ -1103,13 +1294,22 @@ export default function UpdateBookingScreen() {
         </Card>
 
         {/* Branch and Slot Selection */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Thời gian và địa điểm" />
           <Divider />
           <Card.Content>
             {/* Booking Date */}
             <View style={{ marginTop: 12 }}>
-              <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Ngày đặt lịch</Text>
+              <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
+                Ngày đặt lịch
+              </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 style={{
@@ -1120,7 +1320,9 @@ export default function UpdateBookingScreen() {
                   backgroundColor: theme.colors.surface,
                 }}
               >
-                <Text>{formatDateString(bookingDate).split("-").reverse().join("/")}</Text>
+                <Text>
+                  {formatDateString(bookingDate).split("-").reverse().join("/")}
+                </Text>
               </TouchableOpacity>
               {Platform.OS !== "web" && showDatePicker && (
                 <DateTimePicker
@@ -1157,7 +1359,9 @@ export default function UpdateBookingScreen() {
             <View style={{ marginTop: 16 }}>
               <List.Item
                 title="Chọn chi nhánh"
-                description={selectedBranch ? selectedBranch.branch_name : "Chọn chi nhánh"}
+                description={
+                  selectedBranch ? selectedBranch.branch_name : "Chọn chi nhánh"
+                }
                 left={(props) => <List.Icon {...props} icon="map-marker" />}
                 right={(props) => <List.Icon {...props} icon="chevron-right" />}
                 onPress={() => setBranchModal(true)}
@@ -1168,24 +1372,42 @@ export default function UpdateBookingScreen() {
             {/* Time Display (for walk-in bookings) */}
             {!isSlotBooking && booking?.scheduled_start_at && (
               <View style={{ marginTop: 16 }}>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Thời gian dự kiến</Text>
-                <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                <Text
+                  style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}
+                >
+                  Thời gian dự kiến
+                </Text>
+                <View
+                  style={{
+                    padding: 12,
+                    backgroundColor: "#FFF7E6",
+                    borderRadius: 8,
+                  }}
+                >
                   {(() => {
                     const scheduledStart = new Date(booking.scheduled_start_at);
                     const hours = scheduledStart.getHours();
                     const minutes = scheduledStart.getMinutes();
-                    const startTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+                    const startTime = `${String(hours).padStart(
+                      2,
+                      "0"
+                    )}:${String(minutes).padStart(2, "0")}`;
                     const duration = booking.estimated_duration_minutes || 60;
                     const endMinutes = hours * 60 + minutes + duration;
                     const endHours = Math.floor(endMinutes / 60);
                     const endMins = endMinutes % 60;
-                    const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+                    const endTime = `${String(endHours).padStart(
+                      2,
+                      "0"
+                    )}:${String(endMins).padStart(2, "0")}`;
                     return (
                       <>
                         <Text style={{ fontWeight: "600" }}>
                           {startTime} - {endTime}
                         </Text>
-                        <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                        <Text
+                          style={{ fontSize: 12, color: "#666", marginTop: 4 }}
+                        >
                           {duration} phút
                         </Text>
                       </>
@@ -1198,7 +1420,14 @@ export default function UpdateBookingScreen() {
         </Card>
 
         {/* Service Selection */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Dịch vụ" />
           <Divider />
           <Card.Content>
@@ -1211,14 +1440,23 @@ export default function UpdateBookingScreen() {
               style={{ paddingHorizontal: 0 }}
             />
             {selectedItems.length > 0 && (
-              <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View
+                style={{
+                  marginTop: 12,
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
                 {selectedItems.map((item) => (
                   <Chip
                     key={item.item_id}
                     onClose={() => {
                       // Prevent event propagation to avoid circular reference
                       // Filter out the removed item
-                      const newItems = selectedItems.filter((i) => i.item_id !== item.item_id);
+                      const newItems = selectedItems.filter(
+                        (i) => i.item_id !== item.item_id
+                      );
                       setSelectedItems(newItems);
                       console.log(" Service removed from selection:", {
                         removedItem: item.item_name,
@@ -1236,46 +1474,100 @@ export default function UpdateBookingScreen() {
             {(() => {
               const { isSlot: isSlotBookingType } = detectBookingType(booking);
               if (!isSlotBookingType || !isDurationExceedsOriginal) return null;
-              
+
               // Check if services changed
               const isServicesChanged =
-                JSON.stringify(selectedItems.map((item) => item.item_id).sort()) !==
-                JSON.stringify(originalItems.map((item) => item.item_id).sort());
-              
+                JSON.stringify(
+                  selectedItems.map((item) => item.item_id).sort()
+                ) !==
+                JSON.stringify(
+                  originalItems.map((item) => item.item_id).sort()
+                );
+
               if (!isServicesChanged) return null;
-              
+
               const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
               if (totalOriginalSlotTime <= 0) return null;
-              
+
               return (
-                <View style={{ marginTop: 12, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
-                  <Text style={{ color: "#D46B08", fontSize: 12, fontWeight: "600", marginBottom: 4 }}>
+                <View
+                  style={{
+                    marginTop: 12,
+                    padding: 12,
+                    backgroundColor: "#FFF7E6",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#D46B08",
+                      fontSize: 12,
+                      fontWeight: "600",
+                      marginBottom: 4,
+                    }}
+                  >
                     Thông báo về thời gian dịch vụ
                   </Text>
-                  <Text style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}>
-                    Tổng thời gian dịch vụ bạn đã chọn: <Text style={{ fontWeight: "600" }}>{totalDuration} phút</Text>
+                  <Text
+                    style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}
+                  >
+                    Tổng thời gian dịch vụ bạn đã chọn:{" "}
+                    <Text style={{ fontWeight: "600" }}>
+                      {totalDuration} phút
+                    </Text>
                   </Text>
-                  <Text style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}>
-                    Tổng thời gian slot đã đặt ban đầu: <Text style={{ fontWeight: "600" }}>{totalOriginalSlotTime} phút</Text>
+                  <Text
+                    style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}
+                  >
+                    Tổng thời gian slot đã đặt ban đầu:{" "}
+                    <Text style={{ fontWeight: "600" }}>
+                      {totalOriginalSlotTime} phút
+                    </Text>
                   </Text>
                   <Text style={{ color: "#D46B08", fontSize: 12 }}>
-                     Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                    Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn
+                    có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần
+                    chọn slot khác.
                   </Text>
                 </View>
               );
             })()}
             <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
-              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
-                <Text style={{ color: "#52c41a", fontSize: 18, fontWeight: "600" }}>
+              <View
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  backgroundColor: "#F3F4F6",
+                  borderRadius: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{ color: "#52c41a", fontSize: 18, fontWeight: "600" }}
+                >
                   {totalPrice.toLocaleString()} VNĐ
                 </Text>
-                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng giá</Text>
+                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  Tổng giá
+                </Text>
               </View>
-              <View style={{ flex: 1, padding: 12, backgroundColor: "#F3F4F6", borderRadius: 8, alignItems: "center" }}>
-                <Text style={{ color: "#1890ff", fontSize: 18, fontWeight: "600" }}>
+              <View
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  backgroundColor: "#F3F4F6",
+                  borderRadius: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{ color: "#1890ff", fontSize: 18, fontWeight: "600" }}
+                >
                   {totalDuration} phút
                 </Text>
-                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>Tổng thời gian</Text>
+                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  Tổng thời gian
+                </Text>
               </View>
             </View>
           </Card.Content>
@@ -1283,143 +1575,203 @@ export default function UpdateBookingScreen() {
 
         {/* Bay and Slot Selection */}
         {isSlotBooking && selectedBranch && bookingDate && (
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
-            <Card.Title title=" và thời gian" />
+          <Card
+            mode="elevated"
+            style={{
+              borderRadius: 4,
+              marginBottom: 8,
+              backgroundColor: "#ffffff",
+            }}
+          >
+            <Card.Title title="Khu vực và giờ chăm sóc" />
             <Divider />
             <Card.Content>
               {/* Bay Selection */}
               <View style={{ marginTop: 12 }}>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>Khu vực dịch vụ</Text>
+                <Text
+                  style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}
+                >
+                  Khu vực dịch vụ
+                </Text>
                 {(() => {
                   if (!isDurationExceedsOriginal) return null;
-                  
-                  const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+
+                  const totalOriginalSlotTime =
+                    calculateOriginalSlotTime() || 0;
                   if (totalOriginalSlotTime <= 0) return null;
-                  
+
                   return (
-                    <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                    <View
+                      style={{
+                        marginBottom: 8,
+                        padding: 12,
+                        backgroundColor: "#FFF7E6",
+                        borderRadius: 8,
+                      }}
+                    >
                       <Text style={{ color: "#D46B08", fontSize: 12 }}>
-                        Lưu ý: Tổng thời gian dịch vụ bạn đã chọn ({totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu ({totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                        Lưu ý: Tổng thời gian dịch vụ bạn đã chọn (
+                        {totalDuration} phút) vượt quá thời gian slot đã đặt ban
+                        đầu ({totalOriginalSlotTime} phút). Bạn có thể tiếp tục,
+                        hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot
+                        khác.
                       </Text>
                     </View>
                   );
                 })()}
                 {totalDuration <= 0 && (
-                  <View style={{ marginBottom: 8, padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
+                  <View
+                    style={{
+                      marginBottom: 8,
+                      padding: 12,
+                      backgroundColor: "#FFF7E6",
+                      borderRadius: 8,
+                    }}
+                  >
                     <Text style={{ fontSize: 12, color: "#faad14" }}>
                       Vui lòng chọn dịch vụ để xem các mốc thời gian khả dụng
                     </Text>
                   </View>
                 )}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {serviceBays.slice(0, 8).map((bay) => (
-                      <TouchableOpacity
-                        key={bay.bay_id}
-                        onPress={() => {
-                          setSelectedBay(bay);
-                          // Clear available slots to force reload for new bay
-                          setAvailableSlots([]);
-                          // Check if this is the original bay and date
-                          const currentDateStr = formatDateString(bookingDate);
-                          const isOriginalBay = originalSlot && originalSlot.bayId === bay.bay_id;
-                          const isOriginalDate = originalSlot && originalSlot.date === currentDateStr;
-                          
-                          if (isOriginalBay && isOriginalDate) {
-                            // Will restore original slot in the validation effect after slots load
-                            // For now, just clear selected slot to let the effect handle restoration
-                            setSelectedSlot(null);
-                            setIsSlotChanged(false);
-                          } else {
-                            // Reset slot when selecting a different bay or date
-                            setSelectedSlot(null);
-                            setIsSlotChanged(false);
-                          }
-                        }}
-                        style={{
-                          padding: 12,
-                          borderRadius: 8,
-                          borderWidth: 2,
-                          borderColor: selectedBay?.bay_id === bay.bay_id ? "#1890ff" : "#d9d9d9",
-                          backgroundColor: selectedBay?.bay_id === bay.bay_id ? "#E6F7FF" : "#fff",
-                          minWidth: 100,
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text style={{ fontWeight: "600" }}>{bay.bay_name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+
+                <View
+                  style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}
+                >
+                  {serviceBays.slice(0, 8).map((bay) => (
+                    <TouchableOpacity
+                      key={bay.bay_id}
+                      onPress={() => {
+                        setSelectedBay(bay);
+                        // Clear available slots to force reload for new bay
+                        setAvailableSlots([]);
+                        // Check if this is the original bay and date
+                        const currentDateStr = formatDateString(bookingDate);
+                        const isOriginalBay =
+                          originalSlot && originalSlot.bayId === bay.bay_id;
+                        const isOriginalDate =
+                          originalSlot && originalSlot.date === currentDateStr;
+
+                        if (isOriginalBay && isOriginalDate) {
+                          // Will restore original slot in the validation effect after slots load
+                          // For now, just clear selected slot to let the effect handle restoration
+                          setSelectedSlot(null);
+                          setIsSlotChanged(false);
+                        } else {
+                          // Reset slot when selecting a different bay or date
+                          setSelectedSlot(null);
+                          setIsSlotChanged(false);
+                        }
+                      }}
+                      style={{
+                        padding: 12,
+                        borderRadius: 8,
+                        borderWidth: 2,
+                        borderColor:
+                          selectedBay?.bay_id === bay.bay_id
+                            ? "#1890ff"
+                            : "#d9d9d9",
+                        backgroundColor:
+                          selectedBay?.bay_id === bay.bay_id
+                            ? "#E6F7FF"
+                            : "#fff",
+                        minWidth: 100,
+                        alignItems: "center",
+                        width: "48%",
+                      }}
+                    >
+                      <Text style={{ fontWeight: "600" }}>{bay.bay_name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               {/* Slot Selection */}
               {selectedBay && totalDuration > 0 && (
                 <View style={{ marginTop: 16 }}>
-                  <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
+                  <Text
+                    style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}
+                  >
                     Chọn thời gian
                   </Text>
                   {loadingSlots ? (
                     <View style={{ padding: 20, alignItems: "center" }}>
                       <ActivityIndicator />
-                      <Text style={{ marginTop: 8, fontSize: 12 }}>Đang tải danh sách slot...</Text>
+                      <Text style={{ marginTop: 8, fontSize: 12 }}>
+                        Đang tải danh sách slot...
+                      </Text>
                     </View>
                   ) : availableSlots.length > 0 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={{ flexDirection: "row", gap: 8 }}>
-                        {availableSlots.map((slot, index) => {
-                          const canSelect = canSelectSlot(slot);
-                          const isSelected = selectedSlot && selectedSlot.time === slot.time;
-                          
-                          // Get status color and label based on availability
-                          const getSlotStatusInfo = (isAvailable: boolean) => {
-                            if (isAvailable) {
-                              return { color: "#52c41a", bgColor: "#F6FFED", borderColor: "#52c41a", label: "Trống", textColor: "#52c41a" };
-                            } else {
-                              return { color: "#ff4d4f", bgColor: "#FFF2F0", borderColor: "#ff4d4f", label: "Không khả dụng", textColor: "#ff4d4f" };
-                            }
-                          };
-                          
-                          const statusInfo = getSlotStatusInfo(slot.isAvailable);
-                          
-                          return (
-                            <TouchableOpacity
-                              key={`${slot.time}-${index}`}
-                              onPress={() => canSelect && handleSlotSelect(slot)}
-                              disabled={!canSelect}
-                              style={{
-                                padding: 12,
-                                borderRadius: 8,
-                                borderWidth: 2,
-                                borderColor: isSelected
-                                  ? "#52c41a"
-                                  : canSelect
-                                  ? "#d9d9d9"
-                                  : statusInfo.borderColor,
-                                backgroundColor: isSelected
-                                  ? "#F6FFED"
-                                  : canSelect
-                                  ? "#fff"
-                                  : statusInfo.bgColor,
-                                minWidth: 80,
-                                alignItems: "center",
-                                opacity: canSelect ? 1 : 0.7,
-                              }}
-                            >
-                              <Text style={{ fontSize: 14, fontWeight: "600" }}>{slot.time}</Text>
-                              {!canSelect && (
-                                <Text style={{ fontSize: 8, color: statusInfo.textColor, marginTop: 4, fontWeight: "500" }}>
-                                  {statusInfo.label}
-                                </Text>
-                              )}
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    </ScrollView>
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      {availableSlots.map((slot, index) => {
+                        const canSelect = canSelectSlot(slot);
+                        const isSelected =
+                          selectedSlot && selectedSlot.time === slot.time;
+
+                        // Get status color and label based on availability
+                        const getSlotStatusInfo = (isAvailable: boolean) => {
+                          if (isAvailable) {
+                            return {
+                              color: "#52c41a",
+                              bgColor: "#F6FFED",
+                              borderColor: "#52c41a",
+                              label: "Trống",
+                              textColor: "#52c41a",
+                            };
+                          } else {
+                            return {
+                              color: "#ff4d4f",
+                              bgColor: "#FFF2F0",
+                              borderColor: "#ff4d4f",
+                              label: "Không khả dụng",
+                              textColor: "#ff4d4f",
+                            };
+                          }
+                        };
+
+                        const statusInfo = getSlotStatusInfo(slot.isAvailable);
+
+                        return (
+                          <TouchableOpacity
+                            key={`${slot.time}-${index}`}
+                            onPress={() => canSelect && handleSlotSelect(slot)}
+                            disabled={!canSelect}
+                            style={{
+                              padding: 12,
+                              borderRadius: 8,
+                              borderWidth: 2,
+                              borderColor: isSelected
+                                ? "#52c41a"
+                                : canSelect
+                                ? "#d9d9d9"
+                                : statusInfo.borderColor,
+                              backgroundColor: isSelected
+                                ? "#F6FFED"
+                                : canSelect
+                                ? "#fff"
+                                : statusInfo.bgColor,
+                              minWidth: 80,
+                              alignItems: "center",
+                              opacity: canSelect ? 1 : 0.7,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, fontWeight: "600" }}>
+                              {slot.time}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   ) : (
-                    <View style={{ padding: 12, backgroundColor: "#FFF7E6", borderRadius: 8 }}>
-                      <Text style={{ fontSize: 12 }}>Không có thời gian khả dụng</Text>
+                    <View
+                      style={{
+                        padding: 12,
+                        backgroundColor: "#FFF7E6",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12 }}>
+                        Không có thời gian khả dụng
+                      </Text>
                     </View>
                   )}
 
@@ -1433,10 +1785,14 @@ export default function UpdateBookingScreen() {
                       }}
                     >
                       <Text style={{ fontWeight: "600" }}>
-                        Thời gian đã chọn: {selectedSlot.time} - {selectedSlot.endTime}
+                        Thời gian đã chọn: {selectedSlot.time} -{" "}
+                        {selectedSlot.endTime}
                       </Text>
-                      <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                        : {selectedBay?.bay_name} • Ngày: {formatDateString(bookingDate)}
+                      <Text
+                        style={{ fontSize: 12, color: "#666", marginTop: 4 }}
+                      >
+                        : {selectedBay?.bay_name} • Ngày:{" "}
+                        {formatDateString(bookingDate)}
                       </Text>
                       {isSlotChanged && (
                         <Button
@@ -1464,7 +1820,7 @@ export default function UpdateBookingScreen() {
         )}
 
         {/* Notes */}
-        <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
           <Card.Title title="Ghi chú" />
           <Divider />
           <Card.Content>
@@ -1513,7 +1869,13 @@ export default function UpdateBookingScreen() {
             maxHeight: "80%",
           }}
         >
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#e0e0e0" }}>
+          <View
+            style={{
+              padding: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: "#e0e0e0",
+            }}
+          >
             <Text style={{ fontSize: 18, fontWeight: "600" }}>Chọn xe</Text>
           </View>
           <FlatList
@@ -1525,7 +1887,11 @@ export default function UpdateBookingScreen() {
                   setSelectedVehicle(item);
                   setVehicleModal(false);
                 }}
-                style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" }}
+                style={{
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#f0f0f0",
+                }}
               >
                 <Text style={{ fontWeight: "600" }}>{item.license_plate}</Text>
                 <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
@@ -1547,8 +1913,16 @@ export default function UpdateBookingScreen() {
             maxHeight: "80%",
           }}
         >
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#e0e0e0" }}>
-            <Text style={{ fontSize: 18, fontWeight: "600" }}>Chọn chi nhánh</Text>
+          <View
+            style={{
+              padding: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: "#e0e0e0",
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
+              Chọn chi nhánh
+            </Text>
           </View>
           <FlatList
             data={branches}
@@ -1564,11 +1938,17 @@ export default function UpdateBookingScreen() {
                   setAvailableSlots([]);
                   setBranchModal(false);
                 }}
-                style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" }}
+                style={{
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#f0f0f0",
+                }}
               >
                 <Text style={{ fontWeight: "600" }}>{item.branch_name}</Text>
                 {item.address && (
-                  <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{item.address}</Text>
+                  <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                    {item.address}
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
@@ -1586,12 +1966,28 @@ export default function UpdateBookingScreen() {
             maxHeight: "80%",
           }}
         >
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#e0e0e0" }}>
-            <Text style={{ fontSize: 18, fontWeight: "600" }}>Chọn dịch vụ</Text>
+          <View
+            style={{
+              padding: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: "#e0e0e0",
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
+              Chọn dịch vụ
+            </Text>
             {checkingAvailability && selectedBranch && (
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginTop: 8,
+                }}
+              >
                 <ActivityIndicator size="small" style={{ marginRight: 8 }} />
-                <Text style={{ fontSize: 12, color: "#666" }}>Đang kiểm tra tồn kho...</Text>
+                <Text style={{ fontSize: 12, color: "#666" }}>
+                  Đang kiểm tra tồn kho...
+                </Text>
               </View>
             )}
             {!checkingAvailability &&
@@ -1607,7 +2003,8 @@ export default function UpdateBookingScreen() {
                   }}
                 >
                   <Text style={{ fontSize: 12, color: "#D46B08" }}>
-                    Không có dịch vụ nào khả dụng trong chi nhánh này. Tất cả dịch vụ đều không đủ tồn kho.
+                    Không có dịch vụ nào khả dụng trong chi nhánh này. Tất cả
+                    dịch vụ đều không đủ tồn kho.
                   </Text>
                 </View>
               )}
@@ -1615,61 +2012,99 @@ export default function UpdateBookingScreen() {
           {checkingAvailability ? (
             <View style={{ padding: 40, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ marginTop: 12, fontSize: 14, color: "#666" }}>Đang kiểm tra tồn kho...</Text>
+              <Text style={{ marginTop: 12, fontSize: 14, color: "#666" }}>
+                Đang kiểm tra tồn kho...
+              </Text>
             </View>
           ) : (
             <FlatList
               data={availableServices}
-            keyExtractor={(item) => item.item_id}
-            renderItem={({ item }) => {
-              const isSelected = selectedItems.some((i) => i.item_id === item.item_id);
-              return (
-                <TouchableOpacity
-                  onPress={() => {
-                    if (isSelected) {
-                      setSelectedItems(selectedItems.filter((i) => i.item_id !== item.item_id));
-                    } else {
-                      setSelectedItems([...selectedItems, item]);
-                    }
-                  }}
-                  style={{
-                    padding: 16,
-                    borderBottomWidth: 1,
-                    borderBottomColor: "#f0f0f0",
-                    backgroundColor: isSelected ? "#E3F2FD" : "white",
-                  }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "600" }}>{item.item_name}</Text>
-                      {item.service && (
-                        <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                          {item.service.estimated_duration || 60} phút
+              keyExtractor={(item) => item.item_id}
+              renderItem={({ item }) => {
+                const isSelected = selectedItems.some(
+                  (i) => i.item_id === item.item_id
+                );
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (isSelected) {
+                        setSelectedItems(
+                          selectedItems.filter(
+                            (i) => i.item_id !== item.item_id
+                          )
+                        );
+                      } else {
+                        setSelectedItems([...selectedItems, item]);
+                      }
+                    }}
+                    style={{
+                      padding: 16,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#f0f0f0",
+                      backgroundColor: isSelected ? "#E3F2FD" : "white",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: "600" }}>
+                          {item.item_name}
                         </Text>
-                      )}
+                        {item.service && (
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#666",
+                              marginTop: 4,
+                            }}
+                          >
+                            {item.service.estimated_duration || 60} phút
+                          </Text>
+                        )}
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ fontWeight: "600", color: "#52c41a" }}>
+                          {item.fixed_price?.toLocaleString()} VNĐ
+                        </Text>
+                        {isSelected && (
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: "#1890ff",
+                              marginTop: 4,
+                            }}
+                          >
+                            Đã chọn
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontWeight: "600", color: "#52c41a" }}>
-                        {item.fixed_price?.toLocaleString()} VNĐ
-                      </Text>
-                      {isSelected && <Text style={{ fontSize: 10, color: "#1890ff", marginTop: 4 }}>Đã chọn</Text>}
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
-            ListEmptyComponent={
-              <View style={{ padding: 40, alignItems: "center" }}>
-                <Text style={{ fontSize: 14, color: "#999" }}>
-                  {selectedBranch
-                    ? "Không có dịch vụ nào khả dụng trong chi nhánh này"
-                    : "Vui lòng chọn chi nhánh trước"}
-                </Text>
-              </View>
-            }
-          />
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={{ padding: 40, alignItems: "center" }}>
+                  <Text style={{ fontSize: 14, color: "#999" }}>
+                    {selectedBranch
+                      ? "Không có dịch vụ nào khả dụng trong chi nhánh này"
+                      : "Vui lòng chọn chi nhánh trước"}
+                  </Text>
+                </View>
+              }
+            />
           )}
-          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: "#e0e0e0" }}>
+          <View
+            style={{
+              padding: 16,
+              borderTopWidth: 1,
+              borderTopColor: "#e0e0e0",
+            }}
+          >
             <Button mode="contained" onPress={() => setServiceModal(false)}>
               Xong
             </Button>
@@ -1681,7 +2116,11 @@ export default function UpdateBookingScreen() {
         visible={snackbar.visible}
         onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
         duration={3000}
-        style={{ backgroundColor: snackbar.error ? theme.colors.error : theme.colors.primary }}
+        style={{
+          backgroundColor: snackbar.error
+            ? theme.colors.error
+            : theme.colors.primary,
+        }}
       >
         {snackbar.message}
       </Snackbar>

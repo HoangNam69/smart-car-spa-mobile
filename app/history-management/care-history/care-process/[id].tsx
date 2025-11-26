@@ -9,12 +9,12 @@ import {
   useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTrackingEvents } from "../../../../src/hooks/useWebSocket";
 import { bookingService } from "../../../../src/services/booking.service";
 import {
   serviceProcessTrackingService,
   type ServiceProcessTrackingInfoDto,
 } from "../../../../src/services/serviceProcessTracking.service";
-import { useTrackingEvents } from "../../../../src/hooks/useWebSocket";
 
 interface ServiceWithTrackings {
   serviceId: string;
@@ -48,7 +48,8 @@ export default function CareProcessScreen() {
         for (const bookingItem of bookingData.booking_items) {
           if (bookingItem.service_id) {
             const serviceId = bookingItem.service_id;
-            const serviceName = bookingItem.service_name || "Dịch vụ chưa có tên";
+            const serviceName =
+              bookingItem.service_name || "Dịch vụ chưa có tên";
 
             if (!serviceMap.has(serviceId)) {
               serviceMap.set(serviceId, {
@@ -106,26 +107,34 @@ export default function CareProcessScreen() {
     onTrackingUpdated: (event) => {
       // Only reload if this tracking belongs to current booking
       if (event.booking_id === bookingId) {
-        console.log('[CareProcess] WebSocket: Tracking updated for current booking, reloading...');
+        console.log(
+          "[CareProcess] WebSocket: Tracking updated for current booking, reloading..."
+        );
         fetchData();
       }
     },
     onTrackingCompleted: (event) => {
       // Only reload if this tracking belongs to current booking
       if (event.booking_id === bookingId) {
-        console.log('[CareProcess] WebSocket: Tracking completed for current booking, reloading...');
+        console.log(
+          "[CareProcess] WebSocket: Tracking completed for current booking, reloading..."
+        );
         fetchData();
       }
     },
     onTrackingStarted: (event) => {
       // Only reload if this tracking belongs to current booking
       if (event.booking_id === bookingId) {
-        console.log('[CareProcess] WebSocket: Tracking started for current booking, reloading...');
+        console.log(
+          "[CareProcess] WebSocket: Tracking started for current booking, reloading..."
+        );
         fetchData();
       }
     },
     onReload: () => {
-      console.log('[CareProcess] WebSocket: Reload signal received, reloading...');
+      console.log(
+        "[CareProcess] WebSocket: Reload signal received, reloading..."
+      );
       fetchData();
     },
   });
@@ -160,10 +169,10 @@ export default function CareProcessScreen() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
-      edges={["top", "bottom"]}
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+      <ScrollView contentContainerStyle={{ padding: 8, paddingBottom: 24 }}>
         {servicesWithTrackings.length === 0 ? (
           <View
             style={{
@@ -192,8 +201,8 @@ export default function CareProcessScreen() {
                   <Card
                     style={{
                       marginBottom: 16,
-                      borderRadius: 12,
-                      backgroundColor: "white",
+                      borderRadius: 4,
+                      backgroundColor: "#ffffff",
                     }}
                   >
                     <Card.Title
@@ -260,7 +269,7 @@ export default function CareProcessScreen() {
                   </Card>
 
                   {/* Service Steps */}
-                  <View style={{ paddingLeft: 8 }}>
+                  <View>
                     {service.trackings.map((tracking, index) => {
                       const statusConfig = getStatusConfig(tracking.status);
                       const isLast = index === service.trackings.length - 1;
@@ -315,8 +324,8 @@ export default function CareProcessScreen() {
                             <Card
                               style={{
                                 flex: 1,
-                                borderRadius: 12,
-                                backgroundColor: "white",
+                                borderRadius: 4,
+                                backgroundColor: "#ffffff",
                               }}
                             >
                               <Card.Title

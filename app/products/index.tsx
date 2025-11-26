@@ -277,17 +277,17 @@ export default function ProductsPage() {
   }
 
   return (
-    <>
+    <><SafeAreaView
+        style={styles.container}
+        edges={["top"]}
+      >
       <Stack.Screen
         options={{
           title: "Sản phẩm",
           headerShown: true,
         }}
       />
-      <SafeAreaView
-        style={styles.container}
-        edges={["top"]}
-      >
+      
         <FlatList
           ListHeaderComponent={renderHeader}
           data={filteredProducts}

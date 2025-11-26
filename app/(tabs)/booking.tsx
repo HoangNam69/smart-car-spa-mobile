@@ -2,7 +2,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Platform, ScrollView, View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -14,7 +14,7 @@ import {
   Portal,
   Snackbar,
   Text,
-  useTheme
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
@@ -114,14 +114,14 @@ export default function BookingScreen() {
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
       if (!slot.isAvailable) return false;
-      
+
       // Calculate end time for this slot
       const slotStartMinutes = bookingScheduleService.parseTime(slot.time);
       const slotEndMinutes = slotStartMinutes + totalDuration;
-      
+
       // Check if slot fits within any available time range
       if (!timeRangesData) return false;
-      
+
       return timeRangesData.available_time_ranges.some((range) => {
         const rangeStart = bookingScheduleService.parseTime(range.start_time);
         const rangeEnd = bookingScheduleService.parseTime(range.end_time);
@@ -129,7 +129,10 @@ export default function BookingScreen() {
         // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
         // Allow a small tolerance (1 minute) for rounding differences
         const TOLERANCE_MINUTES = 1;
-        return slotStartMinutes >= rangeStart && slotEndMinutes <= (rangeEnd + TOLERANCE_MINUTES);
+        return (
+          slotStartMinutes >= rangeStart &&
+          slotEndMinutes <= rangeEnd + TOLERANCE_MINUTES
+        );
       });
     },
     [timeRangesData, totalDuration]
@@ -556,17 +559,17 @@ export default function BookingScreen() {
       setTimeout(() => router.replace("/(tabs)"), 1000);
     } catch (e: any) {
       console.error("Create booking failed:", e?.response?.data || e);
-      
+
       // Extract error message from backend using helper
       const errorMessage = getErrorMessage(e);
       const errorDuration = 3; // Duration in seconds
-      
+
       setSnackbar({
         visible: true,
         message: errorMessage,
         error: true,
       });
-      
+
       // Reload available slots after error message disappears
       setTimeout(() => {
         if (branchId && bayId && bookingDate && totalDuration > 0) {
@@ -581,7 +584,7 @@ export default function BookingScreen() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
       edges={["top", "bottom"]}
     >
       {loading ? (
@@ -592,12 +595,18 @@ export default function BookingScreen() {
           <Text style={{ marginTop: 8 }}>Đang tải dữ liệu...</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
+        <ScrollView contentContainerStyle={{ padding: 8, paddingBottom: 24 }}>
           {/* Step Indicator */}
           <Card
             mode="elevated"
-            style={{ borderRadius: 12, marginBottom: 16, padding: 16 }}
+            style={{
+              borderRadius: 4,
+              marginBottom: 8,
+              padding: 8,
+              backgroundColor: "#ffffff",
+            }}
           >
+            {/* Step Indicator Content */}
             <View
               style={{
                 flexDirection: "row",
@@ -699,7 +708,11 @@ export default function BookingScreen() {
               {/* Xe */}
               <Card
                 mode="elevated"
-                style={{ borderRadius: 12, marginBottom: 16 }}
+                style={{
+                  borderRadius: 4,
+                  marginBottom: 8,
+                  backgroundColor: "#ffffff",
+                }}
               >
                 <List.Item
                   title="Chọn xe"
@@ -717,7 +730,11 @@ export default function BookingScreen() {
               {/* Thời gian & Chi nhánh */}
               <Card
                 mode="elevated"
-                style={{ borderRadius: 12, marginBottom: 16 }}
+                style={{
+                  borderRadius: 4,
+                  marginBottom: 8,
+                  backgroundColor: "#ffffff",
+                }}
               >
                 <Card.Title
                   title="Thời gian & Chi nhánh"
@@ -768,9 +785,10 @@ export default function BookingScreen() {
               <Card
                 mode="elevated"
                 style={{
-                  borderRadius: 16,
+                  borderRadius: 4,
                   overflow: "hidden",
                   marginBottom: 16,
+                  backgroundColor: "#ffffff",
                 }}
               >
                 <List.Accordion
@@ -778,6 +796,7 @@ export default function BookingScreen() {
                   left={(p) => <List.Icon {...p} icon="clipboard-list" />}
                   titleStyle={{ fontWeight: "bold" }}
                   descriptionStyle={{ fontWeight: "bold" }}
+                  style={{ borderRadius: 4, backgroundColor: "#ffffff" }}
                 >
                   <Card.Content>
                     {checkingAvailability && (
@@ -808,6 +827,7 @@ export default function BookingScreen() {
                         flexDirection: "row",
                         flexWrap: "wrap",
                         justifyContent: "space-between",
+                        backgroundColor: "#ffffff",
                       }}
                     >
                       {availableServices.map((item) => {
@@ -816,6 +836,7 @@ export default function BookingScreen() {
                         );
                         return (
                           <Card
+                            mode="elevated"
                             key={item.item_id}
                             onPress={() => {
                               setSelectedItems((prev) =>
@@ -930,7 +951,11 @@ export default function BookingScreen() {
             <>
               <Card
                 mode="elevated"
-                style={{ borderRadius: 12, marginBottom: 16 }}
+                style={{
+                  borderRadius: 4,
+                  marginBottom: 8,
+                  backgroundColor: "#ffffff",
+                }}
               >
                 <Card.Title
                   title="Khu vực & khung giờ"
@@ -1099,25 +1124,30 @@ export default function BookingScreen() {
           contentContainerStyle={{
             margin: 16,
             backgroundColor: "white",
-            borderRadius: 12,
+            borderRadius: 4,
           }}
         >
-          <FlatList
-            data={vehicles}
-            keyExtractor={(v) => v.vehicle_id}
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.license_plate}
-                description={`${item.brand_name || ""}${
-                  item.brand_name ? " • " : ""
-                }${item.model_name || ""}`}
-                onPress={() => {
-                  setVehicleId(item.vehicle_id);
-                  setVehicleModal(false);
-                }}
-              />
-            )}
-          />
+          <Card.Title title="Chọn xe" />
+          <View style={{ padding: 8 }}>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {vehicles.map((v) => (
+                <Card
+                  key={v.vehicle_id}
+                  onPress={() => {
+                    setVehicleId(v.vehicle_id);
+                    setVehicleModal(false);
+                  }}
+                  style={{
+                    margin: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  <Card.Title title={v.license_plate} />
+                </Card>
+              ))}
+            </ScrollView>
+          </View>
         </Modal>
         <Modal
           visible={branchModal}
@@ -1125,25 +1155,30 @@ export default function BookingScreen() {
           contentContainerStyle={{
             margin: 16,
             backgroundColor: "white",
-            borderRadius: 12,
+            borderRadius: 4,
           }}
         >
-          <FlatList
-            data={branches}
-            keyExtractor={(b) => b.branch_id}
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.branch_name}
-                description={item.address}
-                onPress={() => {
-                  setBranchId(item.branch_id);
-                  setBranchModal(false);
-                  setBayId(undefined);
-                  setSelectedSlot(null);
-                }}
-              />
-            )}
-          />
+          <Card.Title title="Chọn chi nhánh" />
+          <View style={{ padding: 8 }}>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {branches.map((b) => (
+                <Card
+                  key={b.branch_id}
+                  onPress={() => {
+                    setBranchId(b.branch_id);
+                    setBranchModal(false);
+                  }}
+                  style={{
+                    margin: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  <Card.Title title={b.branch_name} />
+                </Card>
+              ))}
+            </ScrollView>
+          </View>
         </Modal>
         <Modal
           visible={bayModal}
@@ -1151,22 +1186,30 @@ export default function BookingScreen() {
           contentContainerStyle={{
             margin: 16,
             backgroundColor: "white",
-            borderRadius: 12,
+            borderRadius: 4,
           }}
         >
-          <FlatList
-            data={bays}
-            keyExtractor={(b) => b.bay_id}
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.bay_name}
-                onPress={() => {
-                  setBayId(item.bay_id);
-                  setBayModal(false);
-                }}
-              />
-            )}
-          />
+          <Card.Title title="Chọn khu vực" />
+          <View style={{ padding: 8 }}>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {bays.map((b) => (
+                <Card
+                  key={b.bay_id}
+                  onPress={() => {
+                    setBayId(b.bay_id);
+                    setBayModal(false);
+                  }}
+                  style={{
+                    margin: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  <Card.Title title={b.bay_name} />
+                </Card>
+              ))}
+            </ScrollView>
+          </View>
         </Modal>
       </Portal>
 

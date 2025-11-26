@@ -123,11 +123,18 @@ export default function PasswordManagementScreen() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
-      edges={["top", "bottom"]}
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
     >
-      <View style={{ padding: 16, gap: 16 }}>
-        <Card mode="elevated" style={{ borderRadius: 12, overflow: "hidden" }}>
+      <View style={{ padding: 8, gap: 8 }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            overflow: "hidden",
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title
             title="Đổi mật khẩu"
             subtitle="Vui lòng nhập đủ các thông tin"
@@ -212,7 +219,14 @@ export default function PasswordManagementScreen() {
           </Card.Content>
         </Card>
 
-        <Card mode="elevated" style={{ borderRadius: 12, overflow: "hidden" }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            overflow: "hidden",
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Quy tắc mật khẩu" />
           <Divider />
           <Card.Content style={{ paddingVertical: 4 }}>

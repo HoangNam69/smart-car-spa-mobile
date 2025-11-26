@@ -1,29 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useCart } from "@/src/context/CartContext";
+import { usePricing, useProductByUrl } from "@/src/hooks";
 import {
-  View,
+  ProductAttributeValue,
+  ProductMedia,
+  ProductService,
+} from "@/src/services/product.service";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  Dimensions,
+  Image,
   ScrollView,
   StyleSheet,
-  Image,
-  Dimensions,
   TouchableOpacity,
+  View,
 } from "react-native";
 import {
-  Text,
-  Button,
   ActivityIndicator,
+  Button,
   Chip,
   Divider,
   IconButton,
+  Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useProductByUrl, usePricing } from "@/src/hooks";
-import { useCart } from "@/src/context/CartContext";
-import {
-  ProductService,
-  ProductMedia,
-  ProductAttributeValue,
-} from "@/src/services/product.service";
 
 const { width } = Dimensions.get("window");
 
@@ -117,25 +117,16 @@ export default function ProductDetailPage() {
   if (productLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
-          color="#6C7BEA"
-        />
+        <ActivityIndicator size="large" color="#6C7BEA" />
       </View>
     );
   }
 
   if (!product) {
     return (
-      <SafeAreaView
-        style={styles.container}
-        edges={["top", "bottom"]}
-      >
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.errorContainer}>
-          <Text
-            variant="headlineSmall"
-            style={styles.errorTitle}
-          >
+          <Text variant="headlineSmall" style={styles.errorTitle}>
             Không tìm thấy sản phẩm
           </Text>
           <Button
@@ -164,19 +155,13 @@ export default function ProductDetailPage() {
           headerShown: true,
         }}
       />
-      <SafeAreaView
-        style={styles.container}
-        edges={["bottom"]}
-      >
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
         <ScrollView>
           {/* Main Image */}
           <View>
             {imagesLoading ? (
               <View style={[styles.image, styles.imageLoading]}>
-                <ActivityIndicator
-                  size="large"
-                  color="#6C7BEA"
-                />
+                <ActivityIndicator size="large" color="#6C7BEA" />
               </View>
             ) : (
               <Image
@@ -215,33 +200,21 @@ export default function ProductDetailPage() {
           </View>
 
           <View style={styles.content}>
-            <Text
-              variant="headlineSmall"
-              style={styles.title}
-            >
+            <Text variant="headlineSmall" style={styles.title}>
               {product.product_name}
             </Text>
 
             {product.brand && (
-              <Text
-                variant="bodyLarge"
-                style={styles.brand}
-              >
+              <Text variant="bodyLarge" style={styles.brand}>
                 {product.brand}
               </Text>
             )}
 
             <View style={styles.priceContainer}>
               {priceLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#6C7BEA"
-                />
+                <ActivityIndicator size="small" color="#6C7BEA" />
               ) : (
-                <Text
-                  variant="headlineMedium"
-                  style={styles.price}
-                >
+                <Text variant="headlineMedium" style={styles.price}>
                   {displayPrice.toLocaleString("vi-VN")}đ
                 </Text>
               )}
@@ -249,19 +222,12 @@ export default function ProductDetailPage() {
 
             <View style={styles.tags}>
               {product.is_featured && (
-                <Chip
-                  icon="star"
-                  style={styles.chip}
-                  mode="flat"
-                >
+                <Chip icon="star" style={styles.chip} mode="flat">
                   Nổi bật
                 </Chip>
               )}
               {product.brand && (
-                <Chip
-                  style={styles.chip}
-                  mode="flat"
-                >
+                <Chip style={styles.chip} mode="flat">
                   {product.brand}
                 </Chip>
               )}
@@ -281,10 +247,7 @@ export default function ProductDetailPage() {
 
             {/* Quantity Selector */}
             <View style={styles.quantitySection}>
-              <Text
-                variant="titleMedium"
-                style={styles.sectionTitle}
-              >
+              <Text variant="titleMedium" style={styles.sectionTitle}>
                 Số lượng:
               </Text>
               <View style={styles.quantitySelector}>
@@ -295,10 +258,7 @@ export default function ProductDetailPage() {
                   disabled={quantity <= 1}
                   mode="contained"
                 />
-                <Text
-                  variant="titleLarge"
-                  style={styles.quantityText}
-                >
+                <Text variant="titleLarge" style={styles.quantityText}>
                   {quantity}
                 </Text>
                 <IconButton
@@ -312,25 +272,16 @@ export default function ProductDetailPage() {
 
             <Divider style={styles.divider} />
 
-            <Text
-              variant="titleMedium"
-              style={styles.sectionTitle}
-            >
+            <Text variant="titleMedium" style={styles.sectionTitle}>
               Mô tả sản phẩm
             </Text>
-            <Text
-              variant="bodyMedium"
-              style={styles.description}
-            >
+            <Text variant="bodyMedium" style={styles.description}>
               {product.description || "Chưa có mô tả"}
             </Text>
 
             <Divider style={styles.divider} />
 
-            <Text
-              variant="titleMedium"
-              style={styles.sectionTitle}
-            >
+            <Text variant="titleMedium" style={styles.sectionTitle}>
               Chi tiết sản phẩm
             </Text>
 
@@ -369,10 +320,7 @@ export default function ProductDetailPage() {
               product.attribute_values.length > 0 && (
                 <>
                   <Divider style={styles.divider} />
-                  <Text
-                    variant="titleMedium"
-                    style={styles.sectionTitle}
-                  >
+                  <Text variant="titleMedium" style={styles.sectionTitle}>
                     Thông số kỹ thuật
                   </Text>
                   {product.attribute_values.map(
@@ -397,16 +345,10 @@ export default function ProductDetailPage() {
 
         <View style={styles.footer}>
           <View style={styles.footerPriceInfo}>
-            <Text
-              variant="bodySmall"
-              style={styles.footerLabel}
-            >
+            <Text variant="bodySmall" style={styles.footerLabel}>
               Tổng tiền:
             </Text>
-            <Text
-              variant="titleLarge"
-              style={styles.footerPrice}
-            >
+            <Text variant="titleLarge" style={styles.footerPrice}>
               {(displayPrice * quantity).toLocaleString("vi-VN")}đ
             </Text>
           </View>

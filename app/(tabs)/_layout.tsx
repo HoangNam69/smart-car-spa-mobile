@@ -3,7 +3,15 @@ import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        tabBarStyle: {
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: 70,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -12,7 +20,6 @@ export default function TabsLayout() {
             <Ionicons name="home-outline" color={color} size={size} />
           ),
           headerShown: false,
-          
         }}
       />
       <Tabs.Screen

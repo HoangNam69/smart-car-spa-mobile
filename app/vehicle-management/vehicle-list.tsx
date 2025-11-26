@@ -2,7 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
-import { ActivityIndicator, Button, Card, FAB, Text } from "react-native-paper";
+import { ActivityIndicator, Button, Card, FAB, Icon, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import {
@@ -58,7 +58,7 @@ export default function VehicleListScreen() {
   }, [user?.user_id]);
 
   const renderItem = ({ item }: { item: VehicleProfileDto }) => (
-    <Card style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}>
+    <Card style={{ marginHorizontal: 8, marginBottom: 8, borderRadius: 4, backgroundColor: "#ffffff" }}>
       <Card.Title
         title={item.license_plate}
         subtitle={`${item.brand_name ?? ""}${item.brand_name ? " • " : ""}${
@@ -69,13 +69,13 @@ export default function VehicleListScreen() {
             style={{
               width: 40,
               height: 40,
-              borderRadius: 20,
+              borderRadius: 4,
               backgroundColor: "#E8ECFF",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: "#6C7BEA", fontWeight: "bold" }}>🚗</Text>
+            <Text style={{ color: "#6C7BEA", fontWeight: "bold" }}><Icon source="car" size={20} color="#6C7BEA" /></Text>
           </View>
         )}
       />
@@ -118,6 +118,7 @@ export default function VehicleListScreen() {
               params: { id: item.vehicle_id },
             })
           }
+          mode="contained"
         >
           Chỉnh sửa
         </Button>
@@ -126,7 +127,7 @@ export default function VehicleListScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F8F6" }} edges={["bottom"]}>
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

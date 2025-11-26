@@ -4,7 +4,10 @@ import { FlatList, RefreshControl, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator, Badge, Card, Chip, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
-import { useBookingEvents, useTrackingEvents } from "../../../src/hooks/useWebSocket";
+import {
+  useBookingEvents,
+  useTrackingEvents,
+} from "../../../src/hooks/useWebSocket";
 import { bookingService } from "../../../src/services/booking.service";
 import { BookingInfoDto } from "../../../src/types/booking.types";
 
@@ -23,11 +26,10 @@ export default function CareHistoryScreen() {
     try {
       const data = await bookingService.getCustomerBookings(user.user_id);
       // Filter bookings with status CHECKED_IN, IN_PROGRESS, COMPLETED
-      const careBookings = data.filter(
-        (b) =>
-          ["CHECKED_IN", "IN_PROGRESS", "COMPLETED"].includes(
-            (b.status || "").toUpperCase()
-          )
+      const careBookings = data.filter((b) =>
+        ["CHECKED_IN", "IN_PROGRESS", "COMPLETED"].includes(
+          (b.status || "").toUpperCase()
+        )
       );
       setAllBookings(careBookings);
     } catch {
@@ -46,27 +48,29 @@ export default function CareHistoryScreen() {
   // confirm/checkin/started/completed, status thay đổi và booking sẽ xuất hiện/ẩn trong care history
   useBookingEvents({
     onBookingConfirmed: (event) => {
-      console.log('[CareHistory] WebSocket: Booking confirmed, reloading...');
+      console.log("[CareHistory] WebSocket: Booking confirmed, reloading...");
       fetchData();
     },
     onBookingCheckedIn: (event) => {
-      console.log('[CareHistory] WebSocket: Booking checked in, reloading...');
+      console.log("[CareHistory] WebSocket: Booking checked in, reloading...");
       fetchData();
     },
     onBookingStarted: (event) => {
-      console.log('[CareHistory] WebSocket: Booking started, reloading...');
+      console.log("[CareHistory] WebSocket: Booking started, reloading...");
       fetchData();
     },
     onBookingCompleted: (event) => {
-      console.log('[CareHistory] WebSocket: Booking completed, reloading...');
+      console.log("[CareHistory] WebSocket: Booking completed, reloading...");
       fetchData();
     },
     onBookingUpdated: (event) => {
-      console.log('[CareHistory] WebSocket: Booking updated, reloading...');
+      console.log("[CareHistory] WebSocket: Booking updated, reloading...");
       fetchData();
     },
     onReload: () => {
-      console.log('[CareHistory] WebSocket: Booking reload signal received, reloading...');
+      console.log(
+        "[CareHistory] WebSocket: Booking reload signal received, reloading..."
+      );
       fetchData();
     },
   });
@@ -74,19 +78,21 @@ export default function CareHistoryScreen() {
   // Subscribe to WebSocket tracking updates for real-time reload
   useTrackingEvents({
     onTrackingUpdated: (event) => {
-      console.log('[CareHistory] WebSocket: Tracking updated, reloading...');
+      console.log("[CareHistory] WebSocket: Tracking updated, reloading...");
       fetchData();
     },
     onTrackingCompleted: (event) => {
-      console.log('[CareHistory] WebSocket: Tracking completed, reloading...');
+      console.log("[CareHistory] WebSocket: Tracking completed, reloading...");
       fetchData();
     },
     onTrackingStarted: (event) => {
-      console.log('[CareHistory] WebSocket: Tracking started, reloading...');
+      console.log("[CareHistory] WebSocket: Tracking started, reloading...");
       fetchData();
     },
     onReload: () => {
-      console.log('[CareHistory] WebSocket: Tracking reload signal received, reloading...');
+      console.log(
+        "[CareHistory] WebSocket: Tracking reload signal received, reloading..."
+      );
       fetchData();
     },
   });
@@ -96,11 +102,10 @@ export default function CareHistoryScreen() {
     setRefreshing(true);
     try {
       const data = await bookingService.getCustomerBookings(user.user_id);
-      const careBookings = data.filter(
-        (b) =>
-          ["CHECKED_IN", "IN_PROGRESS", "COMPLETED"].includes(
-            (b.status || "").toUpperCase()
-          )
+      const careBookings = data.filter((b) =>
+        ["CHECKED_IN", "IN_PROGRESS", "COMPLETED"].includes(
+          (b.status || "").toUpperCase()
+        )
       );
       setAllBookings(careBookings);
     } finally {
@@ -143,18 +148,35 @@ export default function CareHistoryScreen() {
         })
       }
     >
-      <Card style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}>
+      <Card
+        style={{
+          marginHorizontal: 8,
+          marginBottom: 8,
+          borderRadius: 4,
+          backgroundColor: "#ffffff",
+        }}
+      >
         <Card.Title
           title={item.booking_code}
-          subtitle={`${new Date(item.scheduled_start_at || "").toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
+          subtitle={`${new Date(
+            item.scheduled_start_at || ""
+          ).toLocaleString()} • ${item.branch_name || "Chi nhánh"}`}
           right={() => (
-            <Badge size={10} style={{ backgroundColor: statusToColor(item.status), marginRight: 16 }} />
+            <Badge
+              size={10}
+              style={{
+                backgroundColor: statusToColor(item.status),
+                marginRight: 16,
+              }}
+            />
           )}
         />
         <Card.Content>
           <View style={{ flexDirection: "row", marginBottom: 6 }}>
             <Text style={{ color: "#6b7280" }}>Xe: </Text>
-            <Text style={{ fontWeight: "600" }}>{item.vehicle_license_plate}</Text>
+            <Text style={{ fontWeight: "600" }}>
+              {item.vehicle_license_plate}
+            </Text>
           </View>
           {item.vehicle_brand_name || item.vehicle_model_name ? (
             <View style={{ flexDirection: "row", marginBottom: 6 }}>
@@ -166,17 +188,27 @@ export default function CareHistoryScreen() {
               </Text>
             </View>
           ) : null}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 4,
+            }}
+          >
             <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
               {item.bay_name || "Bay"}
             </Chip>
             <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
               {item.total_price?.toLocaleString()} {item.currency || "VND"}
             </Chip>
-            <Chip compact style={{ backgroundColor: statusToColor(item.status) + "20" }}>
-              <Text style={{ color: statusToColor(item.status), fontWeight: "600" }}>
-                {statusToLabel(item.status)}
-              </Text>
+          </View>
+          <View style={{ marginTop: 12 }}>
+            <Chip
+              compact
+              style={{ backgroundColor: statusToColor(item.status) + "20" }}
+            >
+              {item.status}
             </Chip>
           </View>
         </Card.Content>
@@ -204,24 +236,36 @@ export default function CareHistoryScreen() {
   })();
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       {loading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
           <ActivityIndicator />
           <Text style={{ marginTop: 8 }}>Đang tải lịch sử chăm sóc...</Text>
         </View>
       ) : allBookings.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
           <Text>Bạn chưa có lịch chăm sóc nào</Text>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
+          <View style={{ paddingHorizontal: 8 }}>
             <FlatList
               data={[
                 { key: "ALL", label: `Tất cả (${counts.ALL})` },
                 { key: "CHECKED_IN", label: `Check-in (${counts.CHECKED_IN})` },
-                { key: "IN_PROGRESS", label: `Đang chăm sóc (${counts.IN_PROGRESS})` },
+                {
+                  key: "IN_PROGRESS",
+                  label: `Đang chăm sóc (${counts.IN_PROGRESS})`,
+                },
                 { key: "COMPLETED", label: `Hoàn thành (${counts.COMPLETED})` },
               ]}
               keyExtractor={(i) => i.key}
@@ -251,7 +295,9 @@ export default function CareHistoryScreen() {
             data={filtered}
             keyExtractor={(item) => item.booking_id}
             renderItem={renderItem}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
             contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
           />
         </View>

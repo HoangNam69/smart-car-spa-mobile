@@ -117,8 +117,8 @@ export default function VehicleAdditionScreen() {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.surfaceVariant }}
-      edges={["top", "bottom"]}
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
     >
       {loading ? (
         <View
@@ -128,8 +128,8 @@ export default function VehicleAdditionScreen() {
           <Text style={{ marginTop: 8 }}>Đang tải dữ liệu...</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+        <ScrollView contentContainerStyle={{ padding: 8, paddingBottom: 32 }}>
+          <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
             <Card.Content style={{ alignItems: "center", paddingVertical: 20 }}>
               <Avatar.Icon
                 size={64}
@@ -143,7 +143,7 @@ export default function VehicleAdditionScreen() {
             </Card.Content>
           </Card>
 
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
             <Card.Title title="Biển số" />
             <Divider />
             <Card.Content>
@@ -164,7 +164,7 @@ export default function VehicleAdditionScreen() {
             </Card.Content>
           </Card>
 
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
             <Card.Title title="Thông tin xe" />
             <Divider />
             <Card.Content>
@@ -213,7 +213,7 @@ export default function VehicleAdditionScreen() {
             </Card.Content>
           </Card>
 
-          <Card mode="elevated" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
             <Card.Title title="Thông số & mô tả" />
             <Divider />
             <Card.Content>
@@ -264,10 +264,12 @@ export default function VehicleAdditionScreen() {
           onDismiss={() => setBrandModal(false)}
           contentContainerStyle={{
             margin: 16,
-            backgroundColor: "white",
-            borderRadius: 12,
+            backgroundColor: "#F9F8F6",
+            borderRadius: 4,
+            padding: 8,
           }}
         >
+          <Card.Title title="Chọn hãng xe" />
           <ScrollView style={{ maxHeight: 360 }}>
             {brands.map((b) => (
               <Card
@@ -276,7 +278,7 @@ export default function VehicleAdditionScreen() {
                   setBrandId(b.id);
                   setBrandModal(false);
                 }}
-                style={{ margin: 8 }}
+                style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
               >
                 <Card.Title title={b.name} />
               </Card>
@@ -288,10 +290,12 @@ export default function VehicleAdditionScreen() {
           onDismiss={() => setTypeModal(false)}
           contentContainerStyle={{
             margin: 16,
-            backgroundColor: "white",
-            borderRadius: 12,
+            backgroundColor: "#F9F8F6",
+            borderRadius: 4,
+            padding: 8,
           }}
         >
+          <Card.Title title="Chọn loại xe" />
           <ScrollView style={{ maxHeight: 360 }}>
             {types.map((t) => (
               <Card
@@ -300,7 +304,7 @@ export default function VehicleAdditionScreen() {
                   setTypeId(t.id);
                   setTypeModal(false);
                 }}
-                style={{ margin: 8 }}
+                style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
               >
                 <Card.Title title={t.name} />
               </Card>
@@ -312,10 +316,12 @@ export default function VehicleAdditionScreen() {
           onDismiss={() => setModelModal(false)}
           contentContainerStyle={{
             margin: 16,
-            backgroundColor: "white",
-            borderRadius: 12,
+            backgroundColor: "#F9F8F6",
+            borderRadius: 4,
+            padding: 8,
           }}
         >
+          <Card.Title title="Chọn dòng xe" />
           <ScrollView style={{ maxHeight: 360 }}>
             {models.map((m) => (
               <Card
@@ -324,7 +330,7 @@ export default function VehicleAdditionScreen() {
                   setModelId(m.id);
                   setModelModal(false);
                 }}
-                style={{ margin: 8 }}
+                style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
               >
                 <Card.Title title={m.name} />
               </Card>

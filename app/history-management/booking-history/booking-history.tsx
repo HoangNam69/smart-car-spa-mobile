@@ -18,7 +18,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../src/context/AuthContext";
 import { useBookingEvents } from "../../../src/hooks/useWebSocket";
 import { bookingService } from "../../../src/services/booking.service";
-import { BookingInfoDto as BookingServiceDto, BookingType } from "../../../src/types/booking.types";
+import {
+  BookingInfoDto as BookingServiceDto,
+  BookingType,
+} from "../../../src/types/booking.types";
 
 export default function BookingHistoryScreen() {
   const theme = useTheme();
@@ -27,14 +30,25 @@ export default function BookingHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings] = useState<BookingServiceDto[]>([]);
   const [tab, setTab] = useState<
-    "ALL" | "PENDING" | "CONFIRMED" | "CHECKED_IN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+    | "ALL"
+    | "PENDING"
+    | "CONFIRMED"
+    | "CHECKED_IN"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED"
   >("ALL");
-  
+
   // Cancel booking states
   const [cancelModal, setCancelModal] = useState(false);
-  const [cancellingBooking, setCancellingBooking] = useState<BookingServiceDto | null>(null);
+  const [cancellingBooking, setCancellingBooking] =
+    useState<BookingServiceDto | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; error?: boolean }>({
+  const [snackbar, setSnackbar] = useState<{
+    visible: boolean;
+    message: string;
+    error?: boolean;
+  }>({
     visible: false,
     message: "",
     error: false,
@@ -75,35 +89,45 @@ export default function BookingHistoryScreen() {
   // Sử dụng useBookingEvents để handle cả structured events và string signals
   useBookingEvents({
     onBookingCreated: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking created, reloading...');
+      console.log("[BookingHistory] WebSocket: Booking created, reloading...");
       fetchData();
     },
     onBookingConfirmed: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking confirmed, reloading...');
+      console.log(
+        "[BookingHistory] WebSocket: Booking confirmed, reloading..."
+      );
       fetchData();
     },
     onBookingCheckedIn: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking checked in, reloading...');
+      console.log(
+        "[BookingHistory] WebSocket: Booking checked in, reloading..."
+      );
       fetchData();
     },
     onBookingStarted: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking started, reloading...');
+      console.log("[BookingHistory] WebSocket: Booking started, reloading...");
       fetchData();
     },
     onBookingCompleted: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking completed, reloading...');
+      console.log(
+        "[BookingHistory] WebSocket: Booking completed, reloading..."
+      );
       fetchData();
     },
     onBookingCancelled: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking cancelled, reloading...');
+      console.log(
+        "[BookingHistory] WebSocket: Booking cancelled, reloading..."
+      );
       fetchData();
     },
     onBookingUpdated: (event) => {
-      console.log('[BookingHistory] WebSocket: Booking updated, reloading...');
+      console.log("[BookingHistory] WebSocket: Booking updated, reloading...");
       fetchData();
     },
     onReload: () => {
-      console.log('[BookingHistory] WebSocket: Reload signal received, reloading...');
+      console.log(
+        "[BookingHistory] WebSocket: Reload signal received, reloading..."
+      );
       fetchData();
     },
   });
@@ -145,7 +169,11 @@ export default function BookingHistoryScreen() {
       setCancelModal(false);
       setCancellingBooking(null);
       // Hiển thị thông báo thành công
-      setSnackbar({ visible: true, message: "Hủy booking thành công!", error: false });
+      setSnackbar({
+        visible: true,
+        message: "Hủy booking thành công!",
+        error: false,
+      });
       // Refresh bookings sau khi modal đóng để cập nhật danh sách
       // Sử dụng setTimeout nhỏ để đảm bảo modal đã đóng hoàn toàn trước khi reload
       setTimeout(async () => {
@@ -155,7 +183,11 @@ export default function BookingHistoryScreen() {
       // Đóng modal ngay cả khi có lỗi
       setCancelModal(false);
       setCancellingBooking(null);
-      setSnackbar({ visible: true, message: e?.message || "Hủy booking thất bại", error: true });
+      setSnackbar({
+        visible: true,
+        message: e?.message || "Hủy booking thất bại",
+        error: true,
+      });
       // Vẫn refresh để đảm bảo dữ liệu đồng bộ
       setTimeout(async () => {
         await fetchData();
@@ -180,11 +212,11 @@ export default function BookingHistoryScreen() {
     // Fallback: Nếu booking_type không có, kiểm tra booking_code
     // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
     const bookingType = booking.booking_type as string | undefined;
-    const isScheduledBooking = 
-      bookingType === BookingType.SCHEDULED || 
+    const isScheduledBooking =
+      bookingType === BookingType.SCHEDULED ||
       bookingType === "SCHEDULED" ||
       (!bookingType && booking.booking_code?.startsWith("BK-"));
-    
+
     if (!isScheduledBooking) return false;
 
     // Only allow cancellation for PENDING or CONFIRMED status
@@ -197,11 +229,11 @@ export default function BookingHistoryScreen() {
     // Fallback: Nếu booking_type không có, kiểm tra booking_code
     // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
     const bookingType = booking.booking_type as string | undefined;
-    const isScheduledBooking = 
-      bookingType === BookingType.SCHEDULED || 
+    const isScheduledBooking =
+      bookingType === BookingType.SCHEDULED ||
       bookingType === "SCHEDULED" ||
       (!bookingType && booking.booking_code?.startsWith("BK-"));
-    
+
     if (!isScheduledBooking) return false;
 
     // Only allow update for PENDING or CONFIRMED status (giống web)
@@ -211,40 +243,74 @@ export default function BookingHistoryScreen() {
 
   const renderItem = ({ item }: { item: BookingServiceDto }) => (
     <Card
-      style={{ marginHorizontal: 16, marginBottom: 12, borderRadius: 12 }}
+      style={{
+        marginHorizontal: 8,
+        marginBottom: 8,
+        borderRadius: 4,
+        backgroundColor: "#ffffff",
+      }}
       onPress={() => {
-        router.push(`/history-management/booking-history/booking-detail/${item.booking_id}` as any);
+        router.push(
+          `/history-management/booking-history/booking-detail/${item.booking_id}` as any
+        );
       }}
       mode="elevated"
     >
       <Card.Title
         title={item.booking_code}
-        subtitle={`${item.scheduled_start_at ? new Date(item.scheduled_start_at).toLocaleString() : "Chưa có lịch"} • ${item.branch_name || "Chi nhánh"}`}
+        subtitle={`${
+          item.scheduled_start_at
+            ? new Date(item.scheduled_start_at).toLocaleString()
+            : "Chưa có lịch"
+        } • ${item.branch_name || "Chi nhánh"}`}
         right={() => (
-          <Badge size={10} style={{ backgroundColor: statusToColor(item.status), marginRight: 16 }} />
+          <Badge
+            size={10}
+            style={{
+              backgroundColor: statusToColor(item.status),
+              marginRight: 16,
+            }}
+          />
         )}
       />
       <Card.Content>
         <View style={{ flexDirection: "row", marginBottom: 6 }}>
           <Text style={{ color: "#6b7280" }}>Xe: </Text>
-          <Text style={{ fontWeight: "600" }}>{item.vehicle_license_plate}</Text>
+          <Text style={{ fontWeight: "600" }}>
+            {item.vehicle_license_plate}
+          </Text>
         </View>
         {item.vehicle_brand_name || item.vehicle_model_name ? (
           <View style={{ flexDirection: "row", marginBottom: 6 }}>
             <Text style={{ color: "#6b7280" }}>Mẫu: </Text>
             <Text style={{ fontWeight: "600" }}>
-              {(item.vehicle_brand_name || "") + (item.vehicle_brand_name ? " • " : "") + (item.vehicle_model_name || "")}
+              {(item.vehicle_brand_name || "") +
+                (item.vehicle_brand_name ? " • " : "") +
+                (item.vehicle_model_name || "")}
             </Text>
           </View>
         ) : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, marginBottom: 12 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 4,
+            marginBottom: 12,
+          }}
+        >
           <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
             {item.bay_name || "Bay"}
           </Chip>
           <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
             {item.total_price?.toLocaleString()} {item.currency || "VND"}
           </Chip>
-          <Chip compact style={{ backgroundColor: "#F3F4F6" }}>
+        </View>
+        <View style={{ marginBottom: 12 }}>
+          <Chip
+            compact
+            style={{ backgroundColor: statusToColor(item.status) + "20" }}
+          >
             {item.status}
           </Chip>
         </View>
@@ -254,7 +320,9 @@ export default function BookingHistoryScreen() {
               mode="outlined"
               icon="pencil"
               onPress={() => {
-                router.push(`/history-management/booking-history/update-booking/${item.booking_id}`);
+                router.push(
+                  `/history-management/booking-history/update-booking/${item.booking_id}`
+                );
               }}
               contentStyle={{ paddingVertical: 4 }}
               labelStyle={{ fontSize: 14 }}
@@ -304,26 +372,46 @@ export default function BookingHistoryScreen() {
   })();
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
+    >
       {loading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 8,
+          }}
+        >
           <ActivityIndicator />
           <Text style={{ marginTop: 8 }}>Đang tải lịch sử đặt lịch...</Text>
         </View>
       ) : bookings.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 8,
+          }}
+        >
           <Text>Bạn chưa có lịch hẹn nào</Text>
         </View>
       ) : (
-        <View style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
+        <View style={{ flex: 1, padding: 8 }}>
+          <View>
             <FlatList
               data={[
                 { key: "ALL", label: `Tất cả (${counts.ALL})` },
                 { key: "PENDING", label: `Chờ xác nhận (${counts.PENDING})` },
                 { key: "CONFIRMED", label: `Xác nhận (${counts.CONFIRMED})` },
                 { key: "CHECKED_IN", label: `Check-in (${counts.CHECKED_IN})` },
-                { key: "IN_PROGRESS", label: `Đang chăm sóc (${counts.IN_PROGRESS})` },
+                {
+                  key: "IN_PROGRESS",
+                  label: `Đang chăm sóc (${counts.IN_PROGRESS})`,
+                },
                 { key: "COMPLETED", label: `Hoàn thành (${counts.COMPLETED})` },
                 { key: "CANCELLED", label: `Hủy (${counts.CANCELLED})` },
               ]}
@@ -335,8 +423,7 @@ export default function BookingHistoryScreen() {
                     selected={isSelected}
                     onPress={() => setTab(item.key as typeof tab)}
                     style={{
-                      marginRight: 8,
-                      marginVertical: 6,
+                      marginBottom: 8,
                       backgroundColor: isSelected ? "#E8F5E9" : undefined,
                     }}
                     selectedColor={isSelected ? "#2E7D32" : undefined}
@@ -348,37 +435,41 @@ export default function BookingHistoryScreen() {
               }}
               horizontal
               showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 8 }}
             />
           </View>
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.booking_id}
             renderItem={renderItem}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 80 }}
           />
         </View>
       )}
 
       {/* Cancel Booking Dialog */}
       <Portal>
-        <Dialog 
-          visible={cancelModal} 
+        <Dialog
+          visible={cancelModal}
           onDismiss={cancelling ? undefined : closeCancelModal}
           dismissable={!cancelling}
+          style={{ backgroundColor: "#ffffff", borderRadius: 4 }}
         >
           <Dialog.Title>Xác nhận hủy booking</Dialog.Title>
           <Dialog.Content>
             <Text>
               Bạn có chắc chắn muốn hủy booking{" "}
-              <Text style={{ fontWeight: "600" }}>{cancellingBooking?.booking_code}</Text> không?
+              <Text style={{ fontWeight: "600" }}>
+                {cancellingBooking?.booking_code}
+              </Text>{" "}
+              không?
             </Text>
           </Dialog.Content>
-          <Dialog.Actions>
-            <Button 
-              onPress={closeCancelModal} 
-              disabled={cancelling}
-            >
+          <Dialog.Actions style={{ gap: 8 }}>
+            <Button onPress={closeCancelModal} disabled={cancelling}>
               Đóng
             </Button>
             <Button
@@ -387,6 +478,7 @@ export default function BookingHistoryScreen() {
               loading={cancelling}
               disabled={cancelling}
               buttonColor="#ff4d4f"
+              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
             >
               Xác nhận hủy
             </Button>
@@ -398,7 +490,11 @@ export default function BookingHistoryScreen() {
         visible={snackbar.visible}
         onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
         duration={3000}
-        style={{ backgroundColor: snackbar.error ? theme.colors.error : theme.colors.primary }}
+        style={{
+          backgroundColor: snackbar.error
+            ? theme.colors.error
+            : theme.colors.primary,
+        }}
       >
         {snackbar.message}
       </Snackbar>
