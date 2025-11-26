@@ -1,10 +1,13 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useRef } from 'react';
+import { router } from 'expo-router';
 import { authService } from '../services/auth.service';
 import { userService } from '../services/user.service';
 import { tokenStorage } from '../storage/tokenStorage';
 import { AuthState, LoginRequest, SignupRequest, UserInfo } from '../types/auth.types';
 import { UpdateUserRequest } from '../types/user.types';
 import axiosInstance from '../config/axiosConfig';
+import { authEventEmitter } from '../utils/authEventEmitter';
+import { usePasswordChanged } from '../hooks/useWebSocket';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
@@ -13,6 +16,7 @@ interface AuthContextType extends AuthState {
   updateUser: (userData: UpdateUserRequest) => Promise<void>;
   uploadAvatar: (imageUri: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  markPasswordChanged: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +35,9 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>(initialState);
+  // Flag to track if password was just changed on this device
+  // This prevents the device from logging out when it receives its own password change notification
+  const justChangedPasswordRef = useRef(false);
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -292,6 +299,67 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth();
   }, []);
 
+  // Listen for logout events from axios interceptor (when tokens are revoked externally)
+  useEffect(() => {
+    const handleLogout = async () => {
+      console.log('[AuthContext] Received logout event, clearing state');
+      // Clear tokens (already cleared by axios interceptor, but ensure state is synced)
+      await tokenStorage.clearTokens();
+      setState({
+        isAuthenticated: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        loading: false,
+      });
+    };
+
+    // Subscribe to logout events
+    const unsubscribe = authEventEmitter.onLogout(handleLogout);
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Listen for password changed notification from other devices via WebSocket
+  // Use user_id from state.user
+  usePasswordChanged(() => {
+    // Ignore notification if password was just changed on this device
+    if (justChangedPasswordRef.current) {
+      console.log('[AuthContext] Ignoring password changed notification - password was just changed on this device');
+      // Clear the flag after a short delay
+      setTimeout(() => {
+        justChangedPasswordRef.current = false;
+      }, 3000);
+      return;
+    }
+    
+    console.log('[AuthContext] Password changed on another device, logging out...');
+    // Clear tokens and state
+    tokenStorage.clearTokens().then(() => {
+      setState({
+        isAuthenticated: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        loading: false,
+      });
+      // Redirect to login
+      router.replace('/auths/login');
+    });
+  }, state.user?.user_id || null);
+
+  // Expose method to mark that password was just changed
+  const markPasswordChanged = () => {
+    justChangedPasswordRef.current = true;
+    // Clear the flag after 5 seconds (enough time for WebSocket notification to arrive)
+    setTimeout(() => {
+      justChangedPasswordRef.current = false;
+    }, 5000);
+  };
+
   const value: AuthContextType = {
     ...state,
     login,
@@ -300,6 +368,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateUser,
     uploadAvatar,
     refreshUser,
+    markPasswordChanged,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

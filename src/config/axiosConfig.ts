@@ -7,6 +7,7 @@ import axios, {
 import { router } from "expo-router";
 import { tokenStorage } from "../storage/tokenStorage";
 import { API_CONFIG } from "./api.constant";
+import { authEventEmitter } from "../utils/authEventEmitter";
 
 // Token refresh state management - match webapp pattern
 let isRefreshing = false;
@@ -111,6 +112,8 @@ const refreshTokenRequest = async (): Promise<string | null> => {
       }
 
       await tokenStorage.clearTokens();
+      // Notify AuthContext to clear state
+      authEventEmitter.emitLogout();
       router.replace("/auths/login");
     } else {
       console.log(
@@ -175,6 +178,8 @@ axiosInstance.interceptors.response.use(
       if (!refreshTokenValue) {
         console.log("No refresh token available, redirecting to login");
         await tokenStorage.clearTokens();
+        // Notify AuthContext to clear state
+        authEventEmitter.emitLogout();
         router.replace("/auths/login");
         return Promise.reject(error);
       }

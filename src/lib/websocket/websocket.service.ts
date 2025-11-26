@@ -534,29 +534,20 @@ class WebSocketService {
   }
 
   private subscribeToAllTopics(): void {
-    const topics: Topic[] = [
-      "/topic/bookings",
-      "/topic/vehicle-profiles",
-      "/topic/customers",
-      "/topic/trackings",
-    ];
-
+    // Subscribe to ALL topics that have callbacks registered (including dynamic topics like /topic/auth/{userId})
     console.log('[WebSocket] Checking topics to subscribe...');
-    console.log('[WebSocket] Callbacks map:', {
-      bookings: this.callbacks.get('/topic/bookings')?.size || 0,
-      trackings: this.callbacks.get('/topic/trackings')?.size || 0,
-      vehicleProfiles: this.callbacks.get('/topic/vehicle-profiles')?.size || 0,
-      customers: this.callbacks.get('/topic/customers')?.size || 0,
+    console.log('[WebSocket] Total topics with callbacks:', this.callbacks.size);
+    
+    // Log all topics with callbacks
+    this.callbacks.forEach((callbacks, topic) => {
+      console.log(`[WebSocket] Topic ${topic} has ${callbacks.size} callback(s)`);
     });
 
-    topics.forEach((topic) => {
-      if (this.callbacks.has(topic) && this.callbacks.get(topic)!.size > 0) {
-        console.log(`[WebSocket] Subscribing to ${topic} (has ${this.callbacks.get(topic)!.size} callbacks)`);
+    // Subscribe to all topics that have callbacks (including dynamic topics)
+    this.callbacks.forEach((callbacks, topic) => {
+      if (callbacks.size > 0) {
+        console.log(`[WebSocket] Subscribing to ${topic} (has ${callbacks.size} callback(s))`);
         this.subscribeToTopic(topic);
-      } else {
-        if (WS_CONFIG.debug) {
-          console.log(`[WebSocket] Skipping ${topic} (no callbacks registered)`);
-        }
       }
     });
   }

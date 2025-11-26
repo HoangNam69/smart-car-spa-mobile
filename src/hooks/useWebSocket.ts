@@ -348,3 +348,65 @@ export function useTrackingEvents(callbacks: {
   }, []); // Empty deps: chỉ subscribe một lần khi mount
 }
 
+/**
+ * Hook để subscribe password changed notifications
+ * 
+ * MỤC ĐÍCH:
+ * - Subscribe vào /topic/auth/{userId}
+ * - Khi nhận signal "PASSWORD_CHANGED", logout user
+ * - Tự động unsubscribe khi component unmount
+ * 
+ * USAGE:
+ * ```typescript
+ * usePasswordChanged(() => {
+ *   // Logout user
+ *   logout();
+ *   router.replace('/auths/login');
+ * }, userId);
+ * ```
+ * 
+ * @param onPasswordChanged - Callback function được gọi khi password changed
+ * @param userId - User ID để subscribe vào topic cụ thể
+ */
+export function usePasswordChanged(
+  onPasswordChanged: () => void,
+  userId: string | null
+): void {
+  const callbackRef = useRef(onPasswordChanged);
+  
+  useEffect(() => {
+    callbackRef.current = onPasswordChanged;
+  }, [onPasswordChanged]);
+
+  useEffect(() => {
+    if (!userId) {
+      console.log('[usePasswordChanged] Skipping subscription: userId is null');
+      return; // Don't subscribe if no userId
+    }
+
+    console.log('[usePasswordChanged] Subscribing to password changed notifications for userId:', userId);
+    
+    // Subscribe to user-specific auth topic
+    const topic = `/topic/auth/${userId}`;
+    console.log('[usePasswordChanged] Subscribing to topic:', topic);
+    
+    const unsubscribe = websocketService.subscribe(
+      topic,
+      (signal: MessageSignal) => {
+        console.log('[usePasswordChanged] Received signal on topic', topic, ':', signal);
+        if (signal === 'PASSWORD_CHANGED') {
+          console.log('[usePasswordChanged] Password changed signal received, calling callback');
+          callbackRef.current();
+        }
+      }
+    );
+
+    console.log('[usePasswordChanged] Subscription created for topic:', topic);
+
+    return () => {
+      console.log('[usePasswordChanged] Unsubscribing from topic:', topic);
+      unsubscribe();
+    };
+  }, [userId]);
+}
+

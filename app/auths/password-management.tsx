@@ -17,7 +17,7 @@ import { useAuth } from "../../src/context/AuthContext";
 
 export default function PasswordManagementScreen() {
   const theme = useTheme();
-  const { logout } = useAuth();
+  const { markPasswordChanged } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -90,28 +90,29 @@ export default function PasswordManagementScreen() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      // Mark that password is about to be changed on this device
+      // Set flag BEFORE calling API to ensure it's set before WebSocket notification arrives
+      markPasswordChanged();
+      
       await authService.changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       });
+      
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      
       setSnackbar({
         visible: true,
-        message: "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.",
+        message: "Đổi mật khẩu thành công! Các thiết bị khác đã được đăng xuất.",
         error: false,
       });
       
-      // Logout user and redirect to login
-      // All tokens are revoked on backend, so we need to clear local state and redirect
-      setTimeout(async () => {
-        try {
-          await logout();
-        } catch (error) {
-          console.error("Logout error:", error);
-        }
-        router.replace("/auths/login");
+      // Keep current device logged in - backend only revokes tokens of other devices
+      // Navigate back to profile after a short delay
+      setTimeout(() => {
+        router.replace("/(tabs)/profile");
       }, 1500);
     } catch (err: any) {
       let message = "Đổi mật khẩu thất bại, vui lòng thử lại.";
