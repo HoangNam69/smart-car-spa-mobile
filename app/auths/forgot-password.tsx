@@ -13,9 +13,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { authService } from "../../src/services/auth.service";
 import { ConfirmationResult, FirebaseAuthService } from "../../src/services/firebase-auth.service";
 import { ForgotPasswordRequest } from "../../src/types/auth.types";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { logout, isAuthenticated } = useAuth();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1); // 1: Phone, 2: OTP, 3: Password
@@ -149,9 +151,18 @@ export default function ForgotPasswordScreen() {
 
       await authService.forgotPassword(payload);
 
-      setSnack({ visible: true, msg: "Đặt lại mật khẩu thành công" });
+      setSnack({ visible: true, msg: "Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại." });
 
-      setTimeout(() => {
+      // Logout user if authenticated and redirect to login
+      // All tokens are revoked on backend, so we need to clear local state
+      setTimeout(async () => {
+        if (isAuthenticated) {
+          try {
+            await logout();
+          } catch (error) {
+            console.error("Logout error:", error);
+          }
+        }
         router.replace("/auths/login");
       }, 1500);
     } catch (error) {

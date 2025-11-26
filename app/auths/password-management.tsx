@@ -13,9 +13,11 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { authService } from "../../src/services/auth.service";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function PasswordManagementScreen() {
   const theme = useTheme();
+  const { logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -97,13 +99,20 @@ export default function PasswordManagementScreen() {
       setConfirmPassword("");
       setSnackbar({
         visible: true,
-        message: "Đổi mật khẩu thành công!",
+        message: "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.",
         error: false,
       });
-      // Điều hướng về tab profile
-      setTimeout(() => {
-        router.replace("/(tabs)/profile");
-      }, 300);
+      
+      // Logout user and redirect to login
+      // All tokens are revoked on backend, so we need to clear local state and redirect
+      setTimeout(async () => {
+        try {
+          await logout();
+        } catch (error) {
+          console.error("Logout error:", error);
+        }
+        router.replace("/auths/login");
+      }, 1500);
     } catch (err: any) {
       let message = "Đổi mật khẩu thất bại, vui lòng thử lại.";
       if (err?.response?.data?.message) {

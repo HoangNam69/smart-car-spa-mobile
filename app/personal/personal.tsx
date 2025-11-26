@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AvatarCustom from "../../components/avatar/AvatarCustom";
 import { useAuth } from "../../src/context/AuthContext";
+import { useCustomerReload } from "../../src/hooks/useWebSocket";
 
 type GenderValue = "Nam" | "Nữ" | "";
 
@@ -66,7 +67,7 @@ function parseDateInput(input: string): string | undefined {
 
 export default function PersonalScreen() {
   const theme = useTheme();
-  const { user, updateUser, uploadAvatar } = useAuth();
+  const { user, updateUser, uploadAvatar, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone_number ?? "");
@@ -125,6 +126,16 @@ export default function PersonalScreen() {
     setAddress(user?.address ?? "");
     setAvatarUri(user?.avatar_url ?? "");
   }, [user]);
+
+  // WebSocket: Subscribe to customer reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload user data khi có thay đổi từ backend (update profile, upload avatar)
+  // LÝ DO: Khi admin hoặc user khác cập nhật thông tin user, screen này sẽ tự động cập nhật
+  useCustomerReload(() => {
+    if (user?.user_id) {
+      console.log('[PersonalScreen] WebSocket: Reloading user data due to notification...');
+      refreshUser();
+    }
+  });
 
   // Handle avatar change - upload immediately
   async function handleAvatarChange(newUri: string | null) {

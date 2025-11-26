@@ -4,6 +4,7 @@ import { userService } from '../services/user.service';
 import { tokenStorage } from '../storage/tokenStorage';
 import { AuthState, LoginRequest, SignupRequest, UserInfo } from '../types/auth.types';
 import { UpdateUserRequest } from '../types/user.types';
+import axiosInstance from '../config/axiosConfig';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
@@ -194,20 +195,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Làm mới thông tin user từ server (khi cần lấy dữ liệu mới nhất)
   const refreshUser = async () => {
     try {
-      // Nếu có API endpoint để lấy user info mới nhất, gọi ở đây
-      // Ví dụ: const response = await axiosInstance.get('/auth/profile');
-      // Sau đó gọi updateUser(response.data);
+      const userId = state.user?.user_id;
+      if (!userId) {
+        console.warn('[AuthContext] Cannot refresh user: no user ID');
+        return;
+      }
       
-      // Hoặc đơn giản là reload từ storage (nếu đã được cập nhật ở nơi khác)
-      const userData = await tokenStorage.getUserData();
-      if (userData) {
+      // Fetch user data từ API
+      const response = await axiosInstance.get(`/users/${userId}`);
+      if (response.data?.success && response.data?.data) {
+        const userData = response.data.data;
+        // Map từ snake_case sang camelCase nếu cần
+        const mappedUser: UserInfo = {
+          user_id: userData.user_id || userData.userId || userId,
+          email: userData.email || '',
+          full_name: userData.full_name || userData.fullName || '',
+          phone_number: userData.phone_number || userData.phoneNumber || '',
+          date_of_birth: userData.date_of_birth || userData.dateOfBirth || null,
+          gender: userData.gender || 'MALE',
+          address: userData.address || '',
+          avatar_url: userData.avatar_url || userData.avatarUrl || null,
+        };
+        
+        // Lưu vào storage và cập nhật state
+        await tokenStorage.setUserData(mappedUser);
         setState(prev => ({
           ...prev,
-          user: userData,
+          user: mappedUser,
         }));
+        
+        console.log('[AuthContext] User data refreshed from API');
+      } else {
+        // Fallback: reload từ storage nếu API không trả về data
+        const userData = await tokenStorage.getUserData();
+        if (userData) {
+          setState(prev => ({
+            ...prev,
+            user: userData,
+          }));
+        }
       }
     } catch (error) {
-      console.error('Refresh user error:', error);
+      console.error('[AuthContext] Refresh user error:', error);
+      // Fallback: reload từ storage nếu API call fail
+      try {
+        const userData = await tokenStorage.getUserData();
+        if (userData) {
+          setState(prev => ({
+            ...prev,
+            user: userData,
+          }));
+        }
+      } catch (storageError) {
+        console.error('[AuthContext] Failed to reload user from storage:', storageError);
+      }
     }
   };
 
