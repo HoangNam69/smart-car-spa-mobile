@@ -1471,67 +1471,6 @@ export default function UpdateBookingScreen() {
                 ))}
               </View>
             )}
-            {(() => {
-              const { isSlot: isSlotBookingType } = detectBookingType(booking);
-              if (!isSlotBookingType || !isDurationExceedsOriginal) return null;
-
-              // Check if services changed
-              const isServicesChanged =
-                JSON.stringify(
-                  selectedItems.map((item) => item.item_id).sort()
-                ) !==
-                JSON.stringify(
-                  originalItems.map((item) => item.item_id).sort()
-                );
-
-              if (!isServicesChanged) return null;
-
-              const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
-              if (totalOriginalSlotTime <= 0) return null;
-
-              return (
-                <View
-                  style={{
-                    marginTop: 12,
-                    padding: 12,
-                    backgroundColor: "#FFF7E6",
-                    borderRadius: 8,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#D46B08",
-                      fontSize: 12,
-                      fontWeight: "600",
-                      marginBottom: 4,
-                    }}
-                  >
-                    Thông báo về thời gian dịch vụ
-                  </Text>
-                  <Text
-                    style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}
-                  >
-                    Tổng thời gian dịch vụ bạn đã chọn:{" "}
-                    <Text style={{ fontWeight: "600" }}>
-                      {totalDuration} phút
-                    </Text>
-                  </Text>
-                  <Text
-                    style={{ color: "#D46B08", fontSize: 12, marginBottom: 4 }}
-                  >
-                    Tổng thời gian slot đã đặt ban đầu:{" "}
-                    <Text style={{ fontWeight: "600" }}>
-                      {totalOriginalSlotTime} phút
-                    </Text>
-                  </Text>
-                  <Text style={{ color: "#D46B08", fontSize: 12 }}>
-                    Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn
-                    có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần
-                    chọn slot khác.
-                  </Text>
-                </View>
-              );
-            })()}
             <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
               <View
                 style={{
@@ -1593,32 +1532,6 @@ export default function UpdateBookingScreen() {
                 >
                   Khu vực dịch vụ
                 </Text>
-                {(() => {
-                  if (!isDurationExceedsOriginal) return null;
-
-                  const totalOriginalSlotTime =
-                    calculateOriginalSlotTime() || 0;
-                  if (totalOriginalSlotTime <= 0) return null;
-
-                  return (
-                    <View
-                      style={{
-                        marginBottom: 8,
-                        padding: 12,
-                        backgroundColor: "#FFF7E6",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Text style={{ color: "#D46B08", fontSize: 12 }}>
-                        Lưu ý: Tổng thời gian dịch vụ bạn đã chọn (
-                        {totalDuration} phút) vượt quá thời gian slot đã đặt ban
-                        đầu ({totalOriginalSlotTime} phút). Bạn có thể tiếp tục,
-                        hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot
-                        khác.
-                      </Text>
-                    </View>
-                  );
-                })()}
                 {totalDuration <= 0 && (
                   <View
                     style={{
@@ -1701,7 +1614,9 @@ export default function UpdateBookingScreen() {
                       </Text>
                     </View>
                   ) : availableSlots.length > 0 ? (
-                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                    <View
+                      style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}
+                    >
                       {availableSlots.map((slot, index) => {
                         const canSelect = canSelectSlot(slot);
                         const isSelected =
@@ -1820,7 +1735,14 @@ export default function UpdateBookingScreen() {
         )}
 
         {/* Notes */}
-        <Card mode="elevated" style={{ borderRadius: 4, marginBottom: 8, backgroundColor: "#ffffff" }}>
+        <Card
+          mode="elevated"
+          style={{
+            borderRadius: 4,
+            marginBottom: 8,
+            backgroundColor: "#ffffff",
+          }}
+        >
           <Card.Title title="Ghi chú" />
           <Divider />
           <Card.Content>
