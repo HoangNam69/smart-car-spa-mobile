@@ -53,22 +53,46 @@ export default function VehicleAdditionScreen() {
   const loadDropdowns = useCallback(async () => {
     setLoading(true);
     try {
-      const [b, t, m] = await Promise.all([
+      const [b, t] = await Promise.all([
         vehicleService.getBrandsDropdown(),
         vehicleService.getTypesDropdown(),
-        vehicleService.getModelsDropdown(),
       ]);
       setBrands(b);
       setTypes(t);
-      setModels(m);
+      // Models will be loaded when brand and type are selected
+      setModels([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Load models when brand and type are selected
+  const loadModels = useCallback(async () => {
+    if (!brandId || !typeId) {
+      setModels([]);
+      setModelId(undefined);
+      return;
+    }
+    try {
+      const m = await vehicleService.getModelsDropdown(brandId, typeId);
+      setModels(m);
+      // Reset model selection if current model is not in the filtered list
+      if (modelId && !m.find((model) => model.id === modelId)) {
+        setModelId(undefined);
+      }
+    } catch (error) {
+      console.error("Error loading models:", error);
+      setModels([]);
+    }
+  }, [brandId, typeId, modelId]);
+
   useEffect(() => {
     loadDropdowns();
   }, [loadDropdowns]);
+
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   function validate() {
     const next: { [k: string]: string } = {};
@@ -199,11 +223,18 @@ export default function VehicleAdditionScreen() {
               <List.Item
                 title="Dòng xe"
                 description={
-                  models.find((m) => m.id === modelId)?.name || "Chọn dòng xe"
+                  !brandId || !typeId
+                    ? "Vui lòng chọn Hãng xe và Loại xe trước"
+                    : models.find((m) => m.id === modelId)?.name || "Chọn dòng xe"
                 }
                 left={(props) => <List.Icon {...props} icon="car-sports" />}
                 right={(props) => <List.Icon {...props} icon="chevron-right" />}
-                onPress={() => setModelModal(true)}
+                onPress={() => {
+                  if (brandId && typeId) {
+                    setModelModal(true);
+                  }
+                }}
+                disabled={!brandId || !typeId}
               />
               {errors.model ? (
                 <HelperText type="error" visible>
@@ -276,6 +307,8 @@ export default function VehicleAdditionScreen() {
                 key={b.id}
                 onPress={() => {
                   setBrandId(b.id);
+                  setTypeId(undefined); // Reset type when brand changes
+                  setModelId(undefined); // Reset model when brand changes
                   setBrandModal(false);
                 }}
                 style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
@@ -302,6 +335,7 @@ export default function VehicleAdditionScreen() {
                 key={t.id}
                 onPress={() => {
                   setTypeId(t.id);
+                  setModelId(undefined); // Reset model when type changes
                   setTypeModal(false);
                 }}
                 style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
@@ -323,18 +357,28 @@ export default function VehicleAdditionScreen() {
         >
           <Card.Title title="Chọn dòng xe" />
           <ScrollView style={{ maxHeight: 360 }}>
-            {models.map((m) => (
-              <Card
-                key={m.id}
-                onPress={() => {
-                  setModelId(m.id);
-                  setModelModal(false);
-                }}
-                style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
-              >
-                <Card.Title title={m.name} />
+            {models.length === 0 ? (
+              <Card style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}>
+                <Card.Content>
+                  <Text style={{ textAlign: "center", color: "#ff4d4f" }}>
+                    Không tìm thấy model nào phù hợp với Hãng xe và Loại xe đã chọn
+                  </Text>
+                </Card.Content>
               </Card>
-            ))}
+            ) : (
+              models.map((m) => (
+                <Card
+                  key={m.id}
+                  onPress={() => {
+                    setModelId(m.id);
+                    setModelModal(false);
+                  }}
+                  style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
+                >
+                  <Card.Title title={m.name} />
+                </Card>
+              ))
+            )}
           </ScrollView>
         </Modal>
       </Portal>

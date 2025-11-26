@@ -18,8 +18,16 @@ export const vehicleService = {
     const list = api.data.items || api.data.content || api.data;
     return (list || []).map((x: any) => ({ id: x.type_id || x.id, name: x.type_name || x.name }));
   },
-  async getModelsDropdown(): Promise<DropdownItem[]> {
-    const res = await axiosInstance.get("/vehicles/models/dropdown");
+  async getModelsDropdown(brandId?: string, typeId?: string): Promise<DropdownItem[]> {
+    const queryParams = new URLSearchParams();
+    if (brandId) {
+      queryParams.append("brand_id", brandId);
+    }
+    if (typeId) {
+      queryParams.append("type_id", typeId);
+    }
+    const url = `/vehicles/models/dropdown${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+    const res = await axiosInstance.get(url);
     const api = res.data;
     if (!api?.success || !api?.data) return [];
     const list = api.data.items || api.data.content || api.data;

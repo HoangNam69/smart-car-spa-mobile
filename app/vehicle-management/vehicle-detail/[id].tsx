@@ -70,14 +70,22 @@ export default function VehicleDetailScreen() {
       setBrandId(data.vehicle_brand_id);
       setTypeId(data.vehicle_type_id);
       setModelId(data.vehicle_model_id);
-      const [b, t, m] = await Promise.all([
+      const [b, t] = await Promise.all([
         vehicleService.getBrandsDropdown(),
         vehicleService.getTypesDropdown(),
-        vehicleService.getModelsDropdown(),
       ]);
       setBrands(b);
       setTypes(t);
-      setModels(m);
+      // Load models if brand and type are available
+      if (data.vehicle_brand_id && data.vehicle_type_id) {
+        const m = await vehicleService.getModelsDropdown(
+          data.vehicle_brand_id,
+          data.vehicle_type_id
+        );
+        setModels(m);
+      } else {
+        setModels([]);
+      }
     } catch (e: any) {
       setSnackbar({
         visible: true,
@@ -89,9 +97,39 @@ export default function VehicleDetailScreen() {
     }
   }, [profileId]);
 
+  // Load models when brand and type are selected
+  const loadModels = useCallback(async () => {
+    if (!brandId || !typeId) {
+      setModels([]);
+      // Only reset model if we're changing brand/type (not on initial load)
+      if (vehicle && (brandId !== vehicle.vehicle_brand_id || typeId !== vehicle.vehicle_type_id)) {
+        setModelId(undefined);
+      }
+      return;
+    }
+    try {
+      const m = await vehicleService.getModelsDropdown(brandId, typeId);
+      setModels(m);
+      // Reset model selection if current model is not in the filtered list
+      if (modelId && !m.find((model) => model.id === modelId)) {
+        setModelId(undefined);
+      }
+    } catch (error) {
+      console.error("Error loading models:", error);
+      setModels([]);
+    }
+  }, [brandId, typeId, modelId, vehicle]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    // Only load models if vehicle data is already loaded (to avoid loading before initial data)
+    if (vehicle) {
+      loadModels();
+    }
+  }, [loadModels, vehicle]);
 
   function validate() {
     const next: { [k: string]: string } = {};
@@ -233,13 +271,20 @@ export default function VehicleDetailScreen() {
                 <List.Item
                   title="Dòng xe"
                   description={
-                    models.find((m) => m.id === modelId)?.name || "Chọn dòng xe"
+                    !brandId || !typeId
+                      ? "Vui lòng chọn Hãng xe và Loại xe trước"
+                      : models.find((m) => m.id === modelId)?.name || "Chọn dòng xe"
                   }
                   left={(props) => <List.Icon {...props} icon="car-sports" />}
                   right={(props) => (
                     <List.Icon {...props} icon="chevron-right" />
                   )}
-                  onPress={() => setModelModal(true)}
+                  onPress={() => {
+                    if (brandId && typeId) {
+                      setModelModal(true);
+                    }
+                  }}
+                  disabled={!brandId || !typeId}
                 />
                 {errors.model ? (
                   <HelperText type="error" visible>
@@ -312,6 +357,8 @@ export default function VehicleDetailScreen() {
                 key={b.id}
                 onPress={() => {
                   setBrandId(b.id);
+                  setTypeId(undefined); // Reset type when brand changes
+                  setModelId(undefined); // Reset model when brand changes
                   setBrandModal(false);
                 }}
                 style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
@@ -337,6 +384,7 @@ export default function VehicleDetailScreen() {
                 key={t.id}
                 onPress={() => {
                   setTypeId(t.id);
+                  setModelId(undefined); // Reset model when type changes
                   setTypeModal(false);
                 }}
                 style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
@@ -357,18 +405,28 @@ export default function VehicleDetailScreen() {
         >
           <ScrollView style={{ maxHeight: 360 }}>
             <Card.Title title="Chọn dòng xe" />
-            {models.map((m) => (
-              <Card
-                key={m.id}
-                onPress={() => {
-                  setModelId(m.id);
-                  setModelModal(false);
-                }}
-                style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
-              >
-                <Card.Title title={m.name} />
+            {models.length === 0 ? (
+              <Card style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}>
+                <Card.Content>
+                  <Text style={{ textAlign: "center", color: "#ff4d4f" }}>
+                    Không tìm thấy model nào phù hợp với Hãng xe và Loại xe đã chọn
+                  </Text>
+                </Card.Content>
               </Card>
-            ))}
+            ) : (
+              models.map((m) => (
+                <Card
+                  key={m.id}
+                  onPress={() => {
+                    setModelId(m.id);
+                    setModelModal(false);
+                  }}
+                  style={{ margin: 8, borderRadius: 4, backgroundColor: "#ffffff" }}
+                >
+                  <Card.Title title={m.name} />
+                </Card>
+              ))
+            )}
           </ScrollView>
         </Modal>
       </Portal>

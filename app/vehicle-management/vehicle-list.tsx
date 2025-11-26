@@ -9,6 +9,7 @@ import {
   vehicleProfileService,
   type VehicleProfileDto,
 } from "../../src/services/vehicleProfile.service";
+import { useVehicleProfileReload } from "../../src/hooks/useWebSocket";
 
 export default function VehicleListScreen() {
   const { user } = useAuth();
@@ -43,6 +44,14 @@ export default function VehicleListScreen() {
       fetchData();
     }, [fetchData])
   );
+
+  // WebSocket: Subscribe to vehicle profile reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách xe khi có thay đổi từ backend (tạo/cập nhật/xóa)
+  // LÝ DO: Khi admin hoặc user khác tạo/cập nhật/xóa xe, screen này sẽ tự động cập nhật
+  useVehicleProfileReload(() => {
+    console.log('[VehicleListScreen] WebSocket: Reloading vehicle profiles due to notification...');
+    fetchData();
+  });
 
   const onRefresh = useCallback(async () => {
     if (!user?.user_id) return;
