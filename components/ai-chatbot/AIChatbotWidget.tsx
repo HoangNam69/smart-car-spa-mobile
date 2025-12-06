@@ -165,11 +165,13 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     const keyboardWillShowListener = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       (event) => {
-        setKeyboardHeight(event.endCoordinates.height);
-        // Scroll to bottom when keyboard appears
+        const height = event.endCoordinates.height;
+        setKeyboardHeight(height);
+        // Scroll to bottom when keyboard appears with a slight delay
+        // to ensure the layout has adjusted
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        }, Platform.OS === "ios" ? 250 : 100);
       }
     );
 
@@ -177,6 +179,10 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
       () => {
         setKeyboardHeight(0);
+        // Small delay to ensure smooth transition
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
       }
     );
 
@@ -496,7 +502,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
         <SafeAreaView style={styles.modalContainer} edges={["top"]}>
           <KeyboardAvoidingView
             style={styles.keyboardAvoidingView}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             {/* Header */}
@@ -532,11 +538,18 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
               style={styles.messagesContainer}
               contentContainerStyle={[
                 styles.messagesContent,
-                keyboardHeight > 0 && { paddingBottom: keyboardHeight + 20 },
+                keyboardHeight > 0 && { 
+                  paddingBottom: Math.min(keyboardHeight, 0
+
+                  ) + 20 
+                },
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+              }}
             >
               {messages.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -660,6 +673,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 0,
     flexGrow: 1,
+    paddingBottom: 20,
   },
   emptyContainer: {
     flex: 1,
