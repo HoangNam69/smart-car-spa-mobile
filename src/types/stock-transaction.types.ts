@@ -19,6 +19,7 @@ export interface StockTransactionDTO extends BaseAuditEntity {
     | "SALE_RETURN"
     | "PURCHASE_RETURN"
     | "ADJUSTMENT"
+    | "BOOKING" // QUAN TRỌNG: Booking phải dùng BOOKING, không dùng SALE_ORDER
     | null;
   ref_id: string | null;
   branch_id: string;

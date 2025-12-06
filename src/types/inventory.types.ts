@@ -31,7 +31,7 @@ export interface BookingInventoryRequest {
   product_id: string;
   qty: number;
   ref_id: string;
-  ref_type: "SALE_ORDER";
+  ref_type: "BOOKING"; // QUAN TRỌNG: Booking phải dùng BOOKING, không dùng SALE_ORDER
 }
 
 export interface BookingInventoryResponse {
