@@ -32,6 +32,50 @@ export class AiAssistantService {
       throw error;
     }
   }
+
+  /**
+   * Clear draft by draft_id
+   * Mark draft as ABANDONED
+   * @param draftId Draft ID to clear
+   */
+  static async clearDraft(draftId: string): Promise<void> {
+    try {
+      const response = await axiosInstance.post<ApiResponse<null>>(
+        `${this.BASE_URL}/draft/${draftId}`
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to clear draft");
+      }
+    } catch (error: any) {
+      console.log("AI Assistant clear draft error:", error);
+      // Don't throw error - if draft doesn't exist, it's okay
+      // Backend will return success even if draft not found
+      throw error;
+    }
+  }
+
+  /**
+   * Clear draft by session_id
+   * Find draft by session_id and mark as ABANDONED
+   * @param sessionId Session ID to clear draft for
+   */
+  static async clearDraftBySession(sessionId: string): Promise<void> {
+    try {
+      const response = await axiosInstance.post<ApiResponse<null>>(
+        `${this.BASE_URL}/draft/session/${sessionId}`
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to clear draft");
+      }
+    } catch (error: any) {
+      console.log("AI Assistant clear draft by session error:", error);
+      // Don't throw error - if draft doesn't exist, it's okay
+      // Backend will return success even if draft not found
+      throw error;
+    }
+  }
 }
 
 export default AiAssistantService;

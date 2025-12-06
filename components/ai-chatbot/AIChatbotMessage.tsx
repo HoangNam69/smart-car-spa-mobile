@@ -66,7 +66,7 @@ const AIChatbotMessage: React.FC<AIChatbotMessageProps> = ({ message }) => {
                     isUser ? styles.userText : styles.assistantText,
                   ]}
                 >
-                  Đang soạn tin nhắn...
+                  Đang trả lời...
                 </Text>
               </View>
             ) : (

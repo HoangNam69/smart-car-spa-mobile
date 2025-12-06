@@ -7,6 +7,8 @@ export interface ChatRequest {
   conversation_history?: ChatMessage[];
   customer_phone?: string;
   customer_id?: string;
+  session_id?: string;
+  draft_id?: string;
 }
 
 export interface ChatMessage {
@@ -19,6 +21,7 @@ export interface ChatResponse {
   functions_called?: string[];
   requires_action?: boolean;
   action_type?: string | null;
+  draft_id?: string;
 }
 
 export interface AIChatbotMessage {

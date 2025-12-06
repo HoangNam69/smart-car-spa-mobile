@@ -3,7 +3,7 @@ import { AiAssistantService } from "@/src/services/ai-assistant.service";
 import { ChatMessage, AIChatbotMessage as MessageType, QuickAction } from "@/src/types/ai-assistant.types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Alert,
   Keyboard,
@@ -25,6 +25,13 @@ import {
   clearConversationHistory,
   loadConversationHistory,
   saveConversationHistory,
+  getOrCreateSessionId,
+  saveSessionId,
+  clearSessionId,
+  getDraftId,
+  saveDraftId,
+  clearDraftId,
+  clearAllChatbotData,
 } from "@/src/utils/conversationStorage";
 
 interface AIChatbotWidgetProps {
@@ -39,6 +46,9 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -54,56 +64,74 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     return {
       id: "1",
       content: user?.full_name
-        ? `Xin chào ${user.full_name}! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?`
-        : "Xin chào! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?",
+        ? `Xin chào ${user.full_name}! 👋\n\nTôi là trợ lý đặt lịch thông minh của Smart Car Spa. Tôi sẽ giúp bạn đặt lịch hẹn chăm sóc xe một cách nhanh chóng và thuận tiện.\n\nHãy để tôi bắt đầu quy trình đặt lịch cho bạn nhé! 🚗✨`
+        : "Xin chào! 👋\n\nTôi là trợ lý đặt lịch thông minh của Smart Car Spa. Tôi sẽ giúp bạn đặt lịch hẹn chăm sóc xe một cách nhanh chóng và thuận tiện.\n\nHãy để tôi bắt đầu quy trình đặt lịch cho bạn nhé! 🚗✨",
       sender: "assistant",
       timestamp: new Date(),
     };
   };
+
+  // Initialize session ID and draft ID on mount
+  useEffect(() => {
+    const initializeSession = async () => {
+      const session = await getOrCreateSessionId();
+      setSessionId(session);
+      
+      // Load draft ID if exists
+      const savedDraftId = await getDraftId();
+      if (savedDraftId) {
+        setDraftId(savedDraftId);
+      }
+    };
+
+    initializeSession();
+  }, []);
 
   // Initialize messages
   useEffect(() => {
     const initializeMessages = async () => {
       const savedMessages = await loadConversationHistory();
 
+      // If we have saved messages, use them
       if (savedMessages.length > 0) {
         setMessages(savedMessages);
       } else {
-        const welcomeMsg: MessageType = {
-          id: "1",
-          content: user?.full_name
-            ? `Xin chào ${user.full_name}! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?`
-            : "Xin chào! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?",
-          sender: "assistant",
-          timestamp: new Date(),
-        };
-        setMessages([welcomeMsg]);
+        // Otherwise, return welcome message
+        setMessages([getWelcomeMessage()]);
       }
     };
 
     initializeMessages();
-  }, [user?.full_name]);
+  }, []);
 
-  // Update welcome message when user changes
+  // Update welcome message when user changes (login/logout)
+  // Only update if user's full_name changes and we have no conversation history
   useEffect(() => {
     const updateWelcomeMessage = async () => {
       if (!authLoading && isAuthenticated && user?.full_name) {
         const savedMessages = await loadConversationHistory();
 
-        const welcomeMsg: MessageType = {
-          id: "1",
-          content: user?.full_name
-            ? `Xin chào ${user.full_name}! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?`
-            : "Xin chào! Tôi là trợ lý thông minh của trung tâm chăm sóc xe. Tôi có thể giúp bạn đặt lịch hẹn, tìm hiểu về dịch vụ, và trả lời các câu hỏi của bạn. Bạn cần hỗ trợ gì hôm nay?",
-          sender: "assistant",
-          timestamp: new Date(),
-        };
-
+        // Only update welcome message if:
+        // 1. No saved messages (first time chat)
+        // 2. Or first message is welcome message and user name might have changed
         if (savedMessages.length === 0) {
+          const welcomeMsg: MessageType = {
+            id: "1",
+            content: `Xin chào ${user.full_name}! 👋\n\nTôi là trợ lý đặt lịch thông minh của Smart Car Spa. Tôi sẽ giúp bạn đặt lịch hẹn chăm sóc xe một cách nhanh chóng và thuận tiện.\n\nHãy để tôi bắt đầu quy trình đặt lịch cho bạn nhé! 🚗✨`,
+            sender: "assistant",
+            timestamp: new Date(),
+          };
           setMessages([welcomeMsg]);
         } else {
+          // Check if first message is welcome message and update it with user's name
           const firstMessage = savedMessages[0];
           if (firstMessage.id === "1" && firstMessage.sender === "assistant") {
+            const welcomeMsg: MessageType = {
+              id: "1",
+              content: `Xin chào ${user.full_name}! 👋\n\nTôi là trợ lý đặt lịch thông minh của Smart Car Spa. Tôi sẽ giúp bạn đặt lịch hẹn chăm sóc xe một cách nhanh chóng và thuận tiện.\n\nHãy để tôi bắt đầu quy trình đặt lịch cho bạn nhé! 🚗✨`,
+              sender: "assistant",
+              timestamp: new Date(),
+            };
             const updatedMessages = [welcomeMsg, ...savedMessages.slice(1)];
             setMessages(updatedMessages);
           }
@@ -114,12 +142,12 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     updateWelcomeMessage();
   }, [user?.full_name, isAuthenticated, authLoading]);
 
-  // Save conversation history whenever messages change (only when chat is open)
+  // Save conversation history to storage whenever messages change
   useEffect(() => {
-    if (isOpen && messages.length > 0) {
+    if (messages.length > 0) {
       saveConversationHistory(messages);
     }
-  }, [messages, isOpen]);
+  }, [messages]);
 
   // Auto scroll to bottom when new message arrives
   useEffect(() => {
@@ -171,11 +199,17 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
       }));
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string) => {
     // Check authentication before sending
     if (!isAuthenticated) {
       Alert.alert("Thông báo", "Vui lòng đăng nhập để sử dụng trợ lý AI");
       return;
+    }
+
+    // Ensure we have a session ID
+    if (!sessionId) {
+      const newSessionId = await getOrCreateSessionId();
+      setSessionId(newSessionId);
     }
 
     // Add user message
@@ -197,10 +231,20 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
       setMessages((prev) => [...prev, userMessage]);
 
       // Call AI Assistant API
+      // Note: customer_phone and customer_id are automatically extracted from JWT token by backend
+      // No need to send them explicitly
       const response = await AiAssistantService.chat({
         message: content,
         conversation_history: conversationHistory,
+        session_id: sessionId || await getOrCreateSessionId(),
+        draft_id: draftId || undefined,
       });
+
+      // Save draft_id from response if present
+      if (response.draft_id) {
+        setDraftId(response.draft_id);
+        await saveDraftId(response.draft_id);
+      }
 
       // Add assistant response
       const assistantMessage: MessageType = {
@@ -212,7 +256,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
-      console.error("Error sending message to AI:", error);
+      console.log("Error sending message to AI:", error);
       const errorMessage: MessageType = {
         id: (Date.now() + 1).toString(),
         content:
@@ -229,7 +273,30 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sessionId, draftId, isAuthenticated, messages]);
+
+  // Auto-start booking process when chat is opened for the first time
+  useEffect(() => {
+    if (
+      isOpen &&
+      !hasAutoStarted &&
+      isAuthenticated &&
+      !authLoading &&
+      messages.length === 1 &&
+      messages[0].id === "1" &&
+      messages[0].sender === "assistant"
+    ) {
+      // Only auto-start if we have welcome message only (no conversation history)
+      setHasAutoStarted(true);
+      
+      // Send message immediately when chat is opened
+      // This will trigger AI to call getCustomerVehicles() to load customer's vehicles
+      // Use setTimeout with 0ms to ensure it runs after state updates
+      setTimeout(() => {
+        handleSendMessage("Tôi muốn đặt lịch hẹn");
+      }, 0);
+    }
+  }, [isOpen, hasAutoStarted, isAuthenticated, authLoading, messages, handleSendMessage]);
 
   const handleQuickAction = (action: QuickAction) => {
     handleSendMessage(action.action);
@@ -254,34 +321,152 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
         ]);
         return;
       }
-    } else {
-      // When closing chat, clear conversation history
-      await clearConversationHistory();
-      setMessages([getWelcomeMessage()]);
+
+      // Reset auto-start flag when opening chat
+      const savedMessages = await loadConversationHistory();
+      if (savedMessages.length === 0 || (savedMessages.length === 1 && savedMessages[0].id === "1" && savedMessages[0].sender === "assistant")) {
+        setHasAutoStarted(false);
+      }
     }
 
     setIsOpen(!isOpen);
   };
 
   /**
-   * Clear conversation history and reset to welcome message
+   * Refresh conversation - clear history and reset to welcome message
+   * Also clears draft on backend by calling API
+   * This keeps the chat open (unlike handleClose)
    */
-  const handleClearHistory = () => {
-    Alert.alert("Xác nhận", "Bạn có chắc muốn xóa lịch sử hội thoại?", [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: async () => {
-          await clearConversationHistory();
-          setMessages([getWelcomeMessage()]);
-          Alert.alert("Thành công", "Đã xóa lịch sử hội thoại");
+  const handleRefresh = async () => {
+    try {
+      // Option 1: Clear bằng draft_id (khuyến nghị)
+      if (draftId) {
+        try {
+          await AiAssistantService.clearDraft(draftId);
+          console.log("Draft cleared successfully by draft_id");
+        } catch (error) {
+          console.log("Failed to clear draft by draft_id:", error);
+          // Fallback to session_id if draft_id fails
+          if (sessionId) {
+            try {
+              await AiAssistantService.clearDraftBySession(sessionId);
+              console.log("Draft cleared successfully by session_id (fallback)");
+            } catch (sessionError) {
+              console.log("Failed to clear draft by session_id:", sessionError);
+              // Continue anyway - backend might not have draft
+            }
+          }
+        }
+      } else if (sessionId) {
+        // Option 2: Clear bằng session_id nếu không có draft_id
+        try {
+          await AiAssistantService.clearDraftBySession(sessionId);
+          console.log("Draft cleared successfully by session_id");
+        } catch (error) {
+          console.log("Failed to clear draft by session_id:", error);
+          // Continue anyway - backend might not have draft
+        }
+      }
+
+      // Clear all chatbot data (conversation, session, draft)
+      await clearAllChatbotData();
+      
+      // Reset state
+      setMessages([getWelcomeMessage()]);
+      setDraftId(null);
+      setHasAutoStarted(false);
+      
+      // Create new session ID
+      const newSessionId = await getOrCreateSessionId();
+      setSessionId(newSessionId);
+      
+      Alert.alert("Thành công", "Đã làm mới cuộc trò chuyện");
+    } catch (error) {
+      console.log("Error refreshing chat:", error);
+      // Still clear local state even if API call fails
+      await clearAllChatbotData();
+      setMessages([getWelcomeMessage()]);
+      setDraftId(null);
+      setHasAutoStarted(false);
+      const newSessionId = await getOrCreateSessionId();
+      setSessionId(newSessionId);
+      Alert.alert("Thành công", "Đã làm mới cuộc trò chuyện");
+    }
+  };
+
+  /**
+   * Handle close chat with confirmation
+   * Clears draft, conversation history, and closes chat
+   */
+  const handleClose = async () => {
+    Alert.alert(
+      "Xác nhận đóng chat",
+      "Bạn có chắc chắn muốn đóng chat? Tất cả lịch sử hội thoại và booking draft sẽ bị xóa.",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: "Đóng",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear draft on backend
+              if (draftId) {
+                try {
+                  await AiAssistantService.clearDraft(draftId);
+                  console.log("Draft cleared successfully by draft_id");
+                } catch (error) {
+                  console.log("Failed to clear draft by draft_id:", error);
+                  // Fallback to session_id if draft_id fails
+                  if (sessionId) {
+                    try {
+                      await AiAssistantService.clearDraftBySession(sessionId);
+                      console.log("Draft cleared successfully by session_id (fallback)");
+                    } catch (sessionError) {
+                      console.log("Failed to clear draft by session_id:", sessionError);
+                      // Continue anyway - backend might not have draft
+                    }
+                  }
+                }
+              } else if (sessionId) {
+                // Clear bằng session_id nếu không có draft_id
+                try {
+                  await AiAssistantService.clearDraftBySession(sessionId);
+                  console.log("Draft cleared successfully by session_id");
+                } catch (error) {
+                  console.log("Failed to clear draft by session_id:", error);
+                  // Continue anyway - backend might not have draft
+                }
+              }
+
+              // Clear all chatbot data (conversation, session, draft)
+              await clearAllChatbotData();
+              
+              // Reset state
+              setMessages([getWelcomeMessage()]);
+              setDraftId(null);
+              setHasAutoStarted(false);
+              
+              // Close chat
+              setIsOpen(false);
+              
+              Alert.alert("Thành công", "Đã đóng chat và xóa lịch sử");
+            } catch (error) {
+              console.log("Error closing chat:", error);
+              // Still clear local state and close even if API call fails
+              await clearAllChatbotData();
+              setMessages([getWelcomeMessage()]);
+              setDraftId(null);
+              setHasAutoStarted(false);
+              setIsOpen(false);
+              Alert.alert("Thành công", "Đã đóng chat");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const positionStyles =
@@ -306,12 +491,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
         visible={isOpen}
         animationType="slide"
         transparent={false}
-        onRequestClose={async () => {
-          // Clear conversation when closing via back button
-          await clearConversationHistory();
-          setMessages([getWelcomeMessage()]);
-          setIsOpen(false);
-        }}
+        onRequestClose={handleClose}
       >
         <SafeAreaView style={styles.modalContainer} edges={["top"]}>
           <KeyboardAvoidingView
@@ -331,14 +511,14 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
               <View style={styles.headerRight}>
                 {messages.length > 1 && (
                   <TouchableOpacity
-                    onPress={handleClearHistory}
+                    onPress={handleRefresh}
                     style={styles.headerButton}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#fff" />
+                    <Ionicons name="reload" size={20} color="#fff" />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  onPress={handleToggle}
+                  onPress={handleClose}
                   style={styles.headerButton}
                 >
                   <Ionicons name="close" size={24} color="#fff" />
@@ -382,8 +562,8 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
               )}
             </ScrollView>
 
-            {/* Quick Actions */}
-            {messages.length <= 1 && (
+            {/* Quick Actions - Only show if not auto-started yet */}
+            {messages.length <= 1 && !hasAutoStarted && (
               <QuickActions
                 actions={quickActions}
                 onActionClick={handleQuickAction}
