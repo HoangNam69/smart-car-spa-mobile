@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Button, Snackbar, Text, TextInput } from "react-native-paper";
+import { Button, IconButton, Snackbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { LoginRequest } from "../../src/types/auth.types";
@@ -71,6 +71,20 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+      <Stack.Screen
+        options={{
+          title: "Đăng nhập",
+          headerShown: true,
+          headerBackVisible: false,
+          headerLeft: () => (
+            <IconButton
+              icon="arrow-left"
+              iconColor="#33363F"
+              onPress={() => router.replace("/(tabs)")}
+            />
+          ),
+        }}
+      />
       <View style={{ justifyContent: "flex-start", alignItems: "center" }}>
         <Image
           source={require("../../assets/images/logo/ShortLogo.png")}

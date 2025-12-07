@@ -10,7 +10,6 @@ import {
   Text,
   Card,
   Button,
-  Chip,
   ActivityIndicator,
 } from "react-native-paper";
 import { Image } from "react-native";
@@ -68,79 +67,67 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
       style={styles.card}
       mode="elevated"
     >
-      <TouchableOpacity
-        onPress={() => router.push(`/products/${product.product_url}`)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.imageContainer}>
-          {imageLoading ? (
-            <View style={styles.imagePlaceholder}>
-              <ActivityIndicator
-                size="small"
-                color="#6C7BEA"
+      <View style={styles.cardInner}>
+        {/* Image Section - Fixed height */}
+        <TouchableOpacity
+          onPress={() => router.push(`/products/${product.product_url}`)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.imageContainer}>
+            {imageLoading ? (
+              <View style={styles.imagePlaceholder}>
+                <ActivityIndicator
+                  size="small"
+                  color="#6C7BEA"
+                />
+              </View>
+            ) : (
+              <Image
+                source={{
+                  uri: mainImageUrl || "https://via.placeholder.com/200",
+                }}
+                style={styles.image}
+                resizeMode="cover"
               />
-            </View>
-          ) : (
-            <Image
-              source={{
-                uri: mainImageUrl || "https://via.placeholder.com/200",
-              }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          )}
-        </View>
-
-        <Card.Content style={styles.content}>
-          <Text
-            variant="titleSmall"
-            numberOfLines={2}
-            style={styles.title}
-          >
-            {product.product_name}
-          </Text>
-
-          <View style={styles.tagsContainer}>
-            {product.brand && (
-              <Chip
-                style={styles.brandChip}
-                textStyle={styles.chipText}
-              >
-                {product.brand}
-              </Chip>
-            )}
-            {product.is_featured && (
-              <Chip
-                style={styles.featuredChip}
-                textStyle={styles.chipText}
-              >
-                Nổi Bật
-              </Chip>
             )}
           </View>
+        </TouchableOpacity>
 
-          <Text
-            variant="titleMedium"
-            style={styles.price}
-          >
-            {priceLoading ? "..." : formatPrice(price)}
-          </Text>
-        </Card.Content>
-      </TouchableOpacity>
+        {/* Content Section - Flexible, pushes button down */}
+        <View style={styles.contentWrapper}>
+          <Card.Content style={styles.content}>
+            <Text
+              variant="titleSmall"
+              numberOfLines={2}
+              style={styles.title}
+            >
+              {product.product_name}
+            </Text>
 
-      <Card.Actions style={styles.actions}>
-        <Button
-          mode="contained"
-          onPress={() => addToCart(product, 1)}
-          disabled={!product.isAvailable}
-          style={styles.addButton}
-          contentStyle={styles.addButtonContent}
-          labelStyle={styles.addButtonLabel}
-          icon="cart-plus"
-        >
-          Thêm Vào Giỏ
-        </Button>
-      </Card.Actions>
+            <Text
+              variant="titleMedium"
+              style={styles.price}
+            >
+              {priceLoading ? "..." : formatPrice(price)}
+            </Text>
+          </Card.Content>
+
+          {/* Button Section - Always at bottom, centered */}
+          <View style={styles.actions}>
+            <Button
+              mode="contained"
+              onPress={() => addToCart(product, 1)}
+              disabled={!product.isAvailable}
+              style={styles.addButton}
+              contentStyle={styles.addButtonContent}
+              labelStyle={styles.addButtonLabel}
+              icon="cart-plus"
+            >
+              Thêm Vào Giỏ
+            </Button>
+          </View>
+        </View>
+      </View>
     </Card>
   );
 };
@@ -250,13 +237,22 @@ const styles = StyleSheet.create({
     margin: 8,
     backgroundColor: "white",
     borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardInner: {
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 340,
   },
   imageContainer: {
     width: "100%",
     height: CARD_WIDTH * 0.75,
     backgroundColor: "#f5f5f5",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
     overflow: "hidden",
   },
   imagePlaceholder: {
@@ -270,45 +266,41 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  contentWrapper: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "space-between",
+  },
   content: {
-    paddingTop: 12,
-    paddingBottom: 8,
-    minHeight: 120,
+    paddingTop: 14,
+    paddingBottom: 0,
+    paddingHorizontal: 12,
+    flex: 1,
   },
   title: {
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 10,
     lineHeight: 20,
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
-  },
-  brandChip: {
-    backgroundColor: "#E3F2FD",
-    height: 28,
-  },
-  featuredChip: {
-    backgroundColor: "#FFF9C4",
-    height: 28,
-  },
-  chipText: {
-    fontSize: 11,
-    lineHeight: 14,
-    paddingVertical: 2,
+    fontSize: 14,
+    color: "#1a1a1a",
   },
   price: {
-    color: "#333",
+    color: "#6C7BEA",
     fontWeight: "bold",
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 0,
   },
   actions: {
-    padding: 8,
-    paddingTop: 0,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   addButton: {
-    flex: 1,
+    width: "100%",
     borderRadius: 8,
     backgroundColor: "#6C7BEA",
   },

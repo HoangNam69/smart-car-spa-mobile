@@ -124,7 +124,7 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
         <View style={styles.errorContainer}>
           <Text variant="headlineSmall" style={styles.errorTitle}>
             Không tìm thấy sản phẩm

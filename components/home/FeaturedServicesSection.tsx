@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   FlatList,
@@ -11,105 +11,94 @@ import {
   Text,
   Card,
   Button,
-  Chip,
   ActivityIndicator,
 } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { usePublicServices, useServiceMainImage } from "@/src/hooks";
+import { ServiceService } from "@/src/services/service.service";
+import { pricingService } from "@/src/services/pricing.service";
+import { useServiceMainImage } from "@/src/hooks";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
 
 // Service Card Component
-const ServiceCard: React.FC<{ service: any }> = ({ service }) => {
+const ServiceCard: React.FC<{ service: any; price?: number }> = ({ service, price }) => {
   const router = useRouter();
   const { mainImageUrl, loading: imageLoading } = useServiceMainImage(
     service.service_id
   );
+
+  const formatPrice = (value: number | null | undefined) => {
+    if (value === null || value === undefined || value === 0) return "Liên hệ";
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+  };
 
   return (
     <Card
       style={styles.card}
       mode="elevated"
     >
-      <TouchableOpacity
-        onPress={() => router.push(`/services/${service.service_url}` as any)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.imageContainer}>
-          {imageLoading ? (
-            <View style={styles.imagePlaceholder}>
-              <ActivityIndicator
-                size="small"
-                color="#6C7BEA"
+      <View style={styles.cardInner}>
+        {/* Image Section - Fixed height */}
+        <TouchableOpacity
+          onPress={() => router.push(`/services/${service.service_url}` as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.imageContainer}>
+            {imageLoading ? (
+              <View style={styles.imagePlaceholder}>
+                <ActivityIndicator
+                  size="small"
+                  color="#6C7BEA"
+                />
+              </View>
+            ) : (
+              <Image
+                source={{
+                  uri: mainImageUrl || "https://via.placeholder.com/200",
+                }}
+                style={styles.image}
+                resizeMode="cover"
               />
-            </View>
-          ) : (
-            <Image
-              source={{
-                uri: mainImageUrl || "https://via.placeholder.com/200",
-              }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          )}
-        </View>
-
-        <Card.Content style={styles.content}>
-          <Text
-            variant="titleSmall"
-            numberOfLines={2}
-            style={styles.title}
-          >
-            {service.service_name}
-          </Text>
-
-          <View style={styles.tagsContainer}>
-            {service.category_name && (
-              <Chip
-                style={styles.categoryChip}
-                textStyle={styles.chipText}
-              >
-                {service.category_name}
-              </Chip>
-            )}
-            {service.is_featured && (
-              <Chip
-                style={styles.featuredChip}
-                textStyle={styles.chipText}
-              >
-                Nổi Bật
-              </Chip>
             )}
           </View>
+        </TouchableOpacity>
 
-          {service.estimated_duration_minutes && (
-            <View style={styles.durationContainer}>
-              <Chip
-                icon="clock-outline"
-                compact
-                style={styles.durationChip}
-                textStyle={styles.durationText}
-              >
-                {service.estimated_duration_minutes} phút
-              </Chip>
+        {/* Content Section - Flexible, pushes button down */}
+        <View style={styles.contentWrapper}>
+          <Card.Content style={styles.content}>
+            <Text
+              variant="titleSmall"
+              numberOfLines={2}
+              style={styles.title}
+            >
+              {service.service_name}
+            </Text>
+
+            {/* Price */}
+            <View style={styles.priceContainer}>
+              <Text style={styles.priceText}>{formatPrice(price)}</Text>
             </View>
-          )}
-        </Card.Content>
-      </TouchableOpacity>
+          </Card.Content>
 
-      <Card.Actions style={styles.actions}>
-        <Button
-          mode="contained"
-          onPress={() => router.push(`/services/${service.service_url}` as any)}
-          style={styles.viewButton}
-          contentStyle={styles.viewButtonContent}
-          labelStyle={styles.viewButtonLabel}
-          icon="arrow-right"
-        >
-          Xem Chi Tiết
-        </Button>
-      </Card.Actions>
+          {/* Button Section - Always at bottom, centered */}
+          <View style={styles.actions}>
+            <Button
+              mode="contained"
+              onPress={() => router.push(`/services/${service.service_url}` as any)}
+              style={styles.viewButton}
+              contentStyle={styles.viewButtonContent}
+              labelStyle={styles.viewButtonLabel}
+              icon="arrow-right"
+            >
+              Xem Chi Tiết
+            </Button>
+          </View>
+        </View>
+      </View>
     </Card>
   );
 };
@@ -117,27 +106,53 @@ const ServiceCard: React.FC<{ service: any }> = ({ service }) => {
 // Featured Services Section Component
 export default function FeaturedServicesSection() {
   const router = useRouter();
-  const { services: rawServices, loading } = usePublicServices();
+  const [featuredServices, setFeaturedServices] = useState<Array<any & { price?: number }>>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter featured services
-  const featuredServices = useMemo(() => {
-    return rawServices.filter((s) => s.is_featured).slice(0, 6);
-  }, [rawServices]);
+  // Load featured services directly from API with filters (similar to web)
+  useEffect(() => {
+    const loadFeaturedServices = async () => {
+      try {
+        setLoading(true);
+        
+        // Load services
+        const services = await ServiceService.getAllServices({
+          page: 0,
+          size: 6,
+          is_featured: true,
+          is_active: true,
+        });
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
-          color="#6C7BEA"
-        />
-      </View>
-    );
-  }
+        // Load prices for all services in batch
+        const serviceIds = services.map((s) => s.service_id).filter(Boolean);
+        let pricesMap: Record<string, number> = {};
+        
+        if (serviceIds.length > 0) {
+          try {
+            pricesMap = await pricingService.getServicePricesBatch(serviceIds);
+          } catch (error) {
+            console.error("Error loading service prices:", error);
+            // Continue without prices
+          }
+        }
 
-  if (featuredServices.length === 0) {
-    return null;
-  }
+        // Map services with prices
+        const servicesWithData = services.map((service) => ({
+          ...service,
+          price: pricesMap[service.service_id] || 0,
+        }));
+
+        setFeaturedServices(servicesWithData);
+      } catch (error) {
+        console.error("Error loading featured services:", error);
+        setFeaturedServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedServices();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -147,7 +162,7 @@ export default function FeaturedServicesSection() {
           variant="titleMedium"
           style={styles.subtitle}
         >
-          CÁC DỊCH VỤ NỔI BẬT
+          CÁC DỊCH VỤ CHĂM SÓC XE HƠI CAO CẤP TẠI
         </Text>
         <Text
           variant="headlineMedium"
@@ -158,15 +173,28 @@ export default function FeaturedServicesSection() {
       </View>
 
       {/* Services Grid */}
-      <FlatList
-        data={featuredServices}
-        renderItem={({ item }) => <ServiceCard service={item} />}
-        keyExtractor={(item) => item.service_id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
-        scrollEnabled={false}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color="#6C7BEA"
+          />
+        </View>
+      ) : featuredServices.length > 0 ? (
+        <FlatList
+          data={featuredServices}
+          renderItem={({ item }) => <ServiceCard service={item} price={item.price} />}
+          keyExtractor={(item) => item.service_id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listContent}
+          scrollEnabled={false}
+        />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Chưa có dịch vụ nổi bật</Text>
+        </View>
+      )}
 
       {/* View All Button */}
       <View style={styles.viewAllContainer}>
@@ -194,6 +222,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  emptyContainer: {
+    paddingVertical: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#999",
+  },
   header: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -219,13 +256,22 @@ const styles = StyleSheet.create({
     margin: 8,
     backgroundColor: "white",
     borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardInner: {
+    flex: 1,
+    flexDirection: "column",
+    minHeight: 340,
   },
   imageContainer: {
     width: "100%",
     height: CARD_WIDTH * 0.75,
     backgroundColor: "#f5f5f5",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
     overflow: "hidden",
   },
   imagePlaceholder: {
@@ -239,52 +285,43 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  contentWrapper: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "space-between",
+  },
   content: {
-    paddingTop: 12,
-    paddingBottom: 8,
-    minHeight: 120,
+    paddingTop: 14,
+    paddingBottom: 0,
+    paddingHorizontal: 12,
+    flex: 1,
   },
   title: {
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 10,
     lineHeight: 20,
+    fontSize: 14,
+    color: "#1a1a1a",
   },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
+  priceContainer: {
+    marginTop: 8,
+    marginBottom: 0,
   },
-  categoryChip: {
-    backgroundColor: "#E3F2FD",
-    height: 28,
-  },
-  featuredChip: {
-    backgroundColor: "#FFF9C4",
-    height: 28,
-  },
-  chipText: {
-    fontSize: 11,
-    lineHeight: 14,
-    paddingVertical: 2,
-  },
-  durationContainer: {
-    marginTop: 4,
-  },
-  durationChip: {
-    backgroundColor: "#f5f5f5",
-    height: 28,
-  },
-  durationText: {
-    fontSize: 11,
-    lineHeight: 14,
+  priceText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#6C7BEA",
   },
   actions: {
-    padding: 8,
-    paddingTop: 0,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   viewButton: {
-    flex: 1,
+    width: "100%",
     borderRadius: 8,
     backgroundColor: "#6C7BEA",
   },

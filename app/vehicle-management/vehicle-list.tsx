@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
 import { ActivityIndicator, Button, Card, FAB, Icon, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ProtectedRoute from "../../src/components/ProtectedRoute";
 import { useAuth } from "../../src/context/AuthContext";
 import {
   vehicleProfileService,
@@ -136,7 +137,8 @@ export default function VehicleListScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F8F6" }} edges={["bottom"]}>
+    <ProtectedRoute requiredRole="CUSTOMER">
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F8F6" }} edges={["bottom"]}>
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
@@ -184,5 +186,6 @@ export default function VehicleListScreen() {
         color="#fff"
       />
     </SafeAreaView>
+    </ProtectedRoute>
   );
 }

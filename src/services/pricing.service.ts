@@ -41,6 +41,30 @@ export const pricingService = {
     }
     return items;
   },
+
+  /**
+   * Get prices for multiple services in one batch call
+   * Prevents N+1 query pattern
+   *
+   * @param serviceIds - Array of service IDs to get prices for
+   * @param priceBookId - Optional price book ID (uses active price book if not provided)
+   * @returns Map of service_id -> price (only services found in price book)
+   */
+  async getServicePricesBatch(
+    serviceIds: string[],
+    priceBookId?: string
+  ): Promise<Record<string, number>> {
+    try {
+      const response = await axiosInstance.post(`/pricing/batch-service-prices`, {
+        service_ids: serviceIds,
+        price_book_id: priceBookId,
+      });
+      return response.data?.data || {};
+    } catch (error: any) {
+      console.error("Error getting service prices batch:", error);
+      return {};
+    }
+  },
 };
 
 

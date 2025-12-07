@@ -279,7 +279,7 @@ export default function ProductsPage() {
   return (
     <><SafeAreaView
         style={styles.container}
-        edges={["top"]}
+        edges={[]}
       >
       <Stack.Screen
         options={{

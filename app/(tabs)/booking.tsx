@@ -17,6 +17,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ProtectedRoute from "../../src/components/ProtectedRoute";
 import { useAuth } from "../../src/context/AuthContext";
 import { bookingService } from "../../src/services/booking.service";
 import {
@@ -583,10 +584,11 @@ export default function BookingScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
-      edges={["top", "bottom"]}
-    >
+    <ProtectedRoute requiredRole="CUSTOMER">
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+        edges={["top", "bottom"]}
+      >
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
@@ -1256,5 +1258,6 @@ export default function BookingScreen() {
         {snackbar.message}
       </Snackbar>
     </SafeAreaView>
+    </ProtectedRoute>
   );
 }

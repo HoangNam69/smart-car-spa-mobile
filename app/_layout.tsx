@@ -86,13 +86,14 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="auths/login"
                   options={{
-                    title: "Smart Car Spa",
+                    title: "Đăng nhập",
                     headerTitleAlign: "center",
                     headerTintColor: "#33363F",
+                    headerBackVisible: true,
                     headerTitleStyle: {
                       fontWeight: "bold",
                       fontSize: 20,
-                    },
+                    }
                   }}
                 />
                 <Stack.Screen

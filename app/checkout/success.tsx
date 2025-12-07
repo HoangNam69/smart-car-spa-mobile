@@ -11,7 +11,7 @@ export default function CheckoutSuccessPage() {
   return (
     <SafeAreaView
       style={styles.container}
-      edges={["top"]}
+      edges={[]}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}

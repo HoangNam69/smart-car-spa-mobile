@@ -99,41 +99,50 @@ export const useServiceById = (serviceId: string) => {
   return { service, loading, error };
 };
 
-// Hook to get main image for a service
-export const useServiceMainImage = (serviceId: string | undefined) => {
-  const [mainImageUrl, setMainImageUrl] = useState<string | null>(null);
+// Hook to get all images for a service with fallback logic
+export const useServiceImages = (serviceId: string | undefined) => {
+  const [images, setImages] = useState<ServiceMedia[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchMainImage = async () => {
+    const fetchImages = async () => {
       if (!serviceId) {
-        setMainImageUrl(null);
+        setImages([]);
         return;
       }
 
       try {
         setLoading(true);
-        const images = await ServiceService.getServiceImages(serviceId);
+        const allImages = await ServiceService.getServiceImages(serviceId);
 
-        // Sort images: is_main first, then by display_order
-        const sortedImages = [...images].sort((a, b) => {
+        // Sort images: is_main first, then by display_order (sort_order)
+        const sortedImages = [...allImages].sort((a, b) => {
           if (a.is_main && !b.is_main) return -1;
           if (!a.is_main && b.is_main) return 1;
-          return a.display_order - b.display_order;
+          return (a.display_order || 0) - (b.display_order || 0);
         });
 
-        const mainImage = sortedImages[0];
-        setMainImageUrl(mainImage?.media_url || null);
+        setImages(sortedImages);
       } catch (error) {
-        console.error("Error fetching service main image:", error);
-        setMainImageUrl(null);
+        console.error("Error fetching service images:", error);
+        setImages([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMainImage();
+    fetchImages();
   }, [serviceId]);
 
+  // Get main image (first image in sorted list)
+  const mainImage = images.length > 0 ? images[0] : null;
+
+  return { images, mainImage, loading };
+};
+
+// Hook to get main image for a service (backward compatibility)
+export const useServiceMainImage = (serviceId: string | undefined) => {
+  const { images, loading } = useServiceImages(serviceId);
+  const mainImageUrl = images.length > 0 ? images[0]?.media_url || null : null;
   return { mainImageUrl, loading };
 };

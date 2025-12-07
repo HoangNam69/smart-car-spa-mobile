@@ -18,6 +18,7 @@ export {
   useServiceByUrl,
   useServiceById,
   useServiceMainImage,
+  useServiceImages,
 } from "./useServices";
 
 // WebSocket hooks

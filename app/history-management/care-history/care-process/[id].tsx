@@ -156,7 +156,7 @@ export default function CareProcessScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >

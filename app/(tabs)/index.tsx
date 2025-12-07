@@ -1,4 +1,5 @@
 import CarouselCustom from "@/components/carousel/CarouselCustom";
+import FeaturedServicesSection from "@/components/home/FeaturedServicesSection";
 import FeaturedProductsSection from "@/components/home/FeaturedProductsSection";
 import AIChatbotWidget from "@/components/ai-chatbot/AIChatbotWidget";
 import { Image, View, ScrollView, StyleSheet } from "react-native";
@@ -28,6 +29,9 @@ export default function Index() {
         <View style={styles.carouselContainer}>
           <CarouselCustom />
         </View>
+
+        {/* Featured Services Section */}
+        <FeaturedServicesSection />
 
         {/* Featured Products Section */}
         <FeaturedProductsSection />

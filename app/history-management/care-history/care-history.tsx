@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FlatList, RefreshControl, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator, Badge, Card, Chip, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ProtectedRoute from "../../../src/components/ProtectedRoute";
 import { useAuth } from "../../../src/context/AuthContext";
 import {
   useBookingEvents,
@@ -236,7 +237,8 @@ export default function CareHistoryScreen() {
   })();
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+    <ProtectedRoute requiredRole="CUSTOMER">
+      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
@@ -303,5 +305,6 @@ export default function CareHistoryScreen() {
         </View>
       )}
     </SafeAreaView>
+    </ProtectedRoute>
   );
 }

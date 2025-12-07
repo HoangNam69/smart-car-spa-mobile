@@ -157,6 +157,21 @@ export const ProductService = {
       const response = await axiosInstance.get(`/products/${productId}/images`);
       return response.data.data;
     } catch (error: any) {
+      const status = error.response?.status;
+      const errorCode = error.response?.data?.errorCode;
+      
+      // Handle 400/404 gracefully (product not found is a valid case)
+      if (status === 400 || status === 404 || errorCode === "PRODUCT_NOT_FOUND") {
+        // Product doesn't exist or has no images - this is expected, don't log as error
+        if (__DEV__) {
+          console.log(
+            ` [ProductService] Product ${productId} not found or has no images (status: ${status})`
+          );
+        }
+        return [];
+      }
+      
+      // Log other errors (500, network errors, etc.)
       console.error(
         ` [ProductService] Error fetching images for ${productId}:`,
         error.response?.data || error.message

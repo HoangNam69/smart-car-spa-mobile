@@ -15,6 +15,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AvatarCustom from "../../components/avatar/AvatarCustom";
+import ProtectedRoute from "../../src/components/ProtectedRoute";
 import { useAuth } from "../../src/context/AuthContext";
 import { useCustomerReload } from "../../src/hooks/useWebSocket";
 
@@ -242,10 +243,11 @@ export default function PersonalScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
-      edges={["bottom"]}
-    >
+    <ProtectedRoute requiredRole="CUSTOMER">
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+        edges={["bottom"]}
+      >
       <ScrollView contentContainerStyle={{ padding: 8 }}>
         <Card
           mode="elevated"
@@ -473,5 +475,6 @@ export default function PersonalScreen() {
         {snackbar.message}
       </Snackbar>
     </SafeAreaView>
+    </ProtectedRoute>
   );
 }

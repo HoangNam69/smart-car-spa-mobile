@@ -133,17 +133,35 @@ export const ServiceService = {
     }
   },
 
-  // Get all images for a service - match webapp
+  // Get all images for a service - use media entity endpoint
   async getServiceImages(serviceId: string): Promise<ServiceMedia[]> {
     try {
       console.log(
         ` [ServiceService] Fetching images for service: ${serviceId}`
       );
-      const response = await axiosInstance.get(`/services/${serviceId}/images`);
-      const images = response.data?.data || [];
+      // Use media entity endpoint instead of non-existent /services/{id}/images
+      const response = await axiosInstance.get(`/media/entity/SERVICE/${serviceId}`);
+      const mediaList = response.data?.data || [];
+      
+      // Map MediaInfoDto to ServiceMedia format
+      const images: ServiceMedia[] = mediaList.map((media: any) => ({
+        media_id: media.media_id || media.id || "",
+        media_url: media.media_url || media.mediaUrl || "",
+        media_type: media.media_type || media.mediaType || "IMAGE",
+        is_main: media.is_main || media.isMain || false,
+        display_order: media.sort_order || media.sortOrder || 0,
+      }));
+      
       console.log(` [ServiceService] Images received:`, images.length);
       return images;
     } catch (error: any) {
+      // If 404 (no media found), return empty array instead of error
+      if (error.response?.status === 404) {
+        console.log(
+          ` [ServiceService] No images found for service ${serviceId} (404)`
+        );
+        return [];
+      }
       console.error(
         ` [ServiceService] Error fetching images for ${serviceId}:`,
         error.response?.data || error.message
