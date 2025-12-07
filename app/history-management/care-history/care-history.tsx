@@ -238,7 +238,7 @@ export default function CareHistoryScreen() {
 
   return (
     <ProtectedRoute requiredRole="CUSTOMER">
-      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

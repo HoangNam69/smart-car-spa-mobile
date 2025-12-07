@@ -138,7 +138,7 @@ export default function VehicleListScreen() {
 
   return (
     <ProtectedRoute requiredRole="CUSTOMER">
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F8F6" }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F8F6" }} edges={["bottom"]}>
       {loading ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

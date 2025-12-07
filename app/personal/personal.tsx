@@ -244,10 +244,10 @@ export default function PersonalScreen() {
 
   return (
     <ProtectedRoute requiredRole="CUSTOMER">
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: "#F9F8F6" }}
-        edges={["bottom"]}
-      >
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#F9F8F6" }}
+      edges={["bottom"]}
+    >
       <ScrollView contentContainerStyle={{ padding: 8 }}>
         <Card
           mode="elevated"
