@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "94039662872",
+    "project_id": "scsms-106",
+    "storage_bucket": "scsms-106.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94039662872:android:d444a91a1f013d62053e6d",
+        "android_client_info": {
+          "package_name": "com.kltn.smartcarspa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvzCdj6cAdKXmIY7Ao_JdC-EtEBWJszSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
