@@ -1,26 +1,34 @@
-import React, { useEffect, useState } from "react";
-import { View, ScrollView, StyleSheet, Image, Dimensions } from "react-native";
-import {
-  Text,
-  ActivityIndicator,
-  Chip,
-  Divider,
-  Surface,
-  Icon,
-  Button,
-} from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import Carousel from "react-native-reanimated-carousel";
 import { useServiceByUrl, useServiceImages } from "@/src/hooks";
 import { pricingService } from "@/src/services/pricing.service";
+import type { ServiceProcess, ServiceProduct } from "@/src/types/service.types";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  Chip,
+  Divider,
+  Icon,
+  Surface,
+  Text,
+} from "react-native-paper";
+import Carousel from "react-native-reanimated-carousel";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: screenWidth } = Dimensions.get("window");
+
+// Extend Service type to include optional fields from API
+type ExtendedService = ReturnType<typeof useServiceByUrl>["service"] & {
+  service_products?: ServiceProduct[];
+  service_process?: ServiceProcess;
+};
 
 export default function ServiceDetailPage() {
   const router = useRouter();
   const { serviceUrl } = useLocalSearchParams<{ serviceUrl: string }>();
   const { service, loading } = useServiceByUrl(serviceUrl || "");
+  const extendedService = service as ExtendedService | null;
   const { images: serviceImages, loading: imagesLoading } = useServiceImages(
     service?.service_id
   );
@@ -58,6 +66,7 @@ export default function ServiceDetailPage() {
     if (service) {
       loadPrice();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service?.service_id]);
 
   const formatPrice = (value: number | null | undefined) => {
@@ -287,7 +296,9 @@ export default function ServiceDetailPage() {
                   key={index}
                   style={styles.specRow}
                 >
-                  <Icon source="circle-small" size={12} color="#666" style={styles.specIcon} />
+                  <View style={styles.specIcon}>
+                    <Icon source="circle-small" size={12} color="#666" />
+                  </View>
                   <View style={styles.specContent}>
                     <Text style={styles.specLabel}>
                       {attr.attribute_name}
@@ -307,11 +318,11 @@ export default function ServiceDetailPage() {
               variant="titleLarge"
               style={styles.sectionTitle}
             >
-              Sản phẩm sử dụng {service.service_products ? `(${service.service_products.length})` : ""}
+              Sản phẩm sử dụng {extendedService?.service_products ? `(${extendedService.service_products.length})` : ""}
             </Text>
             <Divider style={styles.divider} />
-            {service.service_products && service.service_products.length > 0 ? (
-              service.service_products.map((product, index) => (
+            {extendedService?.service_products && extendedService.service_products.length > 0 ? (
+              extendedService.service_products.map((product: ServiceProduct, index: number) => (
                 <View key={product.id || index} style={styles.productCard}>
                   <View style={styles.productHeader}>
                     <View style={styles.productNumber}>
@@ -374,7 +385,7 @@ export default function ServiceDetailPage() {
           </Surface>
 
           {/* Service Process Steps - Separate section */}
-          {service.service_process && service.service_process.process_steps && service.service_process.process_steps.length > 0 && (
+          {extendedService?.service_process && extendedService.service_process.process_steps && extendedService.service_process.process_steps.length > 0 && (
             <Surface style={styles.processSection}>
               <Text
                 variant="titleLarge"
@@ -383,7 +394,7 @@ export default function ServiceDetailPage() {
                 Quy trình thực hiện
               </Text>
               <Divider style={styles.divider} />
-              {service.service_process.process_steps.map((step, index) => (
+              {extendedService.service_process.process_steps.map((step: any, index: number) => (
                 <View key={step.id || index} style={styles.processStep}>
                   <View style={styles.processStepHeader}>
                     <View style={styles.processStepNumber}>
@@ -405,7 +416,7 @@ export default function ServiceDetailPage() {
                       ⏱ {step.estimated_time} phút
                     </Text>
                   )}
-                  {index < service.service_process!.process_steps.length - 1 && (
+                  {index < extendedService.service_process!.process_steps.length - 1 && (
                     <Divider style={styles.processStepDivider} />
                   )}
                 </View>
@@ -602,6 +613,8 @@ const styles = StyleSheet.create({
   },
   specIcon: {
     marginRight: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   specText: {
     fontSize: 14,
@@ -704,15 +717,19 @@ const styles = StyleSheet.create({
   },
   requiredChip: {
     backgroundColor: "#ff4d4f",
-    height: 28,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    minHeight: 32,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   requiredChipText: {
     fontSize: 12,
     color: "#fff",
-    lineHeight: 16,
+    lineHeight: 18,
     fontWeight: "500",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   productDetail: {
     fontSize: 13,
