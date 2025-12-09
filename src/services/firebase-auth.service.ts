@@ -30,16 +30,6 @@ export interface PhoneAuthData {
   verificationCode?: string;
 }
 
-// User interface for compatibility
-export interface User {
-  uid: string;
-  phoneNumber?: string | null;
-  email?: string | null;
-  displayName?: string | null;
-  updateProfile: (profile: { displayName?: string }) => Promise<void>;
-  sendEmailVerification: () => Promise<void>;
-}
-
 export class FirebaseAuthService {
   /**
    * Gửi OTP đến số điện thoại
