@@ -1,4 +1,4 @@
-const { withAndroidManifest, AndroidConfig } = require('@expo/config-plugins');
+const { withAndroidManifest, withAppBuildGradle, withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -43,5 +43,68 @@ const withNetworkSecurityConfig = (config) => {
   });
 };
 
-module.exports = withNetworkSecurityConfig;
+/**
+ * Plugin to ensure Firebase Google Services plugin is applied correctly
+ */
+const withFirebaseGoogleServices = (config) => {
+  return withAppBuildGradle(config, (config) => {
+    const buildGradle = config.modResults.contents;
+    
+    // Check if Google Services plugin is already applied
+    if (!buildGradle.includes("apply plugin: 'com.google.gms.google-services'")) {
+      // Add Google Services plugin at the end of the file
+      config.modResults.contents = buildGradle + "\n\napply plugin: 'com.google.gms.google-services'";
+      console.log(' Added Google Services plugin to app/build.gradle');
+    }
+    
+    return config;
+  });
+};
+
+/**
+ * Plugin to ensure google-services.json is copied to the correct location
+ */
+const withGoogleServicesJson = (config) => {
+  return withDangerousMod(config, [
+    'android',
+    async (config) => {
+      const projectRoot = config.modRequest.projectRoot;
+      const googleServicesSource = path.join(projectRoot, 'google-services.json');
+      const googleServicesDest = path.join(
+        config.modRequest.platformProjectRoot,
+        'app',
+        'google-services.json'
+      );
+
+      // Check if source file exists
+      if (fs.existsSync(googleServicesSource)) {
+        // Ensure destination directory exists
+        const destDir = path.dirname(googleServicesDest);
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true });
+        }
+
+        // Copy google-services.json to app directory
+        fs.copyFileSync(googleServicesSource, googleServicesDest);
+        console.log(' Copied google-services.json to android/app/');
+      } else {
+        console.warn(' Warning: google-services.json not found in project root');
+      }
+
+      return config;
+    },
+  ]);
+};
+
+/**
+ * Combined plugin that applies network security, Firebase config, and Google Services JSON
+ */
+const withCustomConfig = (config) => {
+  config = withNetworkSecurityConfig(config);
+  config = withFirebaseGoogleServices(config);
+  config = withGoogleServicesJson(config);
+  return config;
+};
+
+module.exports = withCustomConfig;
 
