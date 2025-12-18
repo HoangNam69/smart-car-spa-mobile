@@ -134,9 +134,22 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Log AI Assistant requests for debugging
+    if (config.url?.includes('/ai-assistant')) {
+      console.log("[Axios] AI Assistant request:", {
+        url: config.url,
+        method: config.method,
+        baseURL: config.baseURL,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        timeout: config.timeout,
+      });
+    }
+
     return config;
   },
   (error: AxiosError) => {
+    console.error("[Axios] Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
@@ -162,8 +175,18 @@ axiosInstance.interceptors.response.use(
       statusText: error.response?.statusText,
       url: originalRequest?.url,
       method: originalRequest?.method,
+      baseURL: originalRequest?.baseURL,
+      fullURL: originalRequest?.baseURL ? `${originalRequest.baseURL}${originalRequest.url}` : originalRequest?.url,
       data: error.response?.data,
       message: error.message,
+      code: (error as any)?.code,
+      errno: (error as any)?.errno,
+      syscall: (error as any)?.syscall,
+      address: (error as any)?.address,
+      port: (error as any)?.port,
+      hasResponse: !!error.response,
+      isNetworkError: !error.response && (error.message?.includes("Network Error") || (error as any)?.code === "ERR_NETWORK"),
+      isTimeout: (error as any)?.code === "ECONNABORTED",
     });
 
     // Handle 401 - Unauthorized - match webapp pattern

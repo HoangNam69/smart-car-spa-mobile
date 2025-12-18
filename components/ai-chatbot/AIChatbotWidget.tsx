@@ -236,14 +236,30 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
       // Add user message to state after building history
       setMessages((prev) => [...prev, userMessage]);
 
+      // Log before calling API
+      const currentSessionId = sessionId || await getOrCreateSessionId();
+      console.log("[AIChatbotWidget] Calling AI Assistant API:", {
+        message: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+        conversationHistoryLength: conversationHistory.length,
+        sessionId: currentSessionId,
+        draftId: draftId || 'none',
+        isAuthenticated,
+      });
+
       // Call AI Assistant API
       // Note: customer_phone and customer_id are automatically extracted from JWT token by backend
       // No need to send them explicitly
       const response = await AiAssistantService.chat({
         message: content,
         conversation_history: conversationHistory,
-        session_id: sessionId || await getOrCreateSessionId(),
+        session_id: currentSessionId,
         draft_id: draftId || undefined,
+      });
+
+      console.log("[AIChatbotWidget] AI Assistant response received:", {
+        hasMessage: !!response.message,
+        messageLength: response.message?.length || 0,
+        draftId: response.draft_id,
       });
 
       // Save draft_id from response if present
@@ -262,19 +278,60 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
-      console.log("Error sending message to AI:", error);
+      // Enhanced error logging
+      console.error("[AIChatbotWidget] Error sending message to AI:", {
+        message: error?.message,
+        status: error?.status || error?.response?.status,
+        statusText: error?.response?.statusText,
+        responseData: error?.response?.data,
+        responseHeaders: error?.response?.headers,
+        code: error?.code,
+        config: error?.config ? {
+          url: error.config.url,
+          method: error.config.method,
+          baseURL: error.config.baseURL,
+          timeout: error.config.timeout,
+        } : undefined,
+        isNetworkError: !error?.response,
+        isTimeout: error?.code === 'ECONNABORTED',
+      });
+
+      // Extract meaningful error message
+      let errorMessageText = "Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.";
+      
+      if (error?.message) {
+        // Use error message from service (already processed)
+        errorMessageText = error.message;
+      } else if (error?.response?.data?.message) {
+        // Backend error message
+        errorMessageText = error.response.data.message;
+      } else if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
+        // Timeout error
+        errorMessageText = "Yêu cầu của bạn đang mất quá nhiều thời gian để xử lý. Vui lòng thử lại sau.";
+      } else if (error?.response?.status === 401) {
+        // Unauthorized - token expired
+        errorMessageText = "Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại.";
+      } else if (error?.response?.status === 500) {
+        // Server error
+        errorMessageText = "Máy chủ đang gặp sự cố. Vui lòng thử lại sau.";
+      } else if (error?.response?.status === 503) {
+        // Service unavailable
+        errorMessageText = "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.";
+      }
+
       const errorMessage: MessageType = {
         id: (Date.now() + 1).toString(),
-        content:
-          error?.message ||
-          "Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.",
+        content: errorMessageText,
         sender: "assistant",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+      
+      // Show alert with more specific message
       Alert.alert(
         "Lỗi",
-        "Không thể kết nối với trợ lý AI. Vui lòng thử lại sau."
+        errorMessageText,
+        [{ text: "Đóng", style: "default" }]
       );
     } finally {
       setIsLoading(false);

@@ -55,11 +55,27 @@ class AuthService {
         timestamp: apiResponse.timestamp,
         data: transformedData,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng nhập"
-      );
+      
+      // Handle network errors specifically
+      let errorMessage = "Có lỗi xảy ra khi đăng nhập";
+      
+      // Network error or timeout (no response)
+      if (!error.response) {
+        if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+          errorMessage = "Kết nối quá thời gian. Vui lòng kiểm tra kết nối mạng và thử lại.";
+        } else if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error") || error.message?.includes("network")) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.";
+        } else {
+          errorMessage = error?.message || "Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.";
+        }
+      } else {
+        // API returned an error response
+        errorMessage = error?.response?.data?.message || error?.message || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -173,11 +189,27 @@ class AuthService {
         timestamp: apiResponse.timestamp,
         data: transformedData,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng ký"
-      );
+      
+      // Handle network errors specifically
+      let errorMessage = "Có lỗi xảy ra khi đăng ký";
+      
+      // Network error or timeout (no response)
+      if (!error.response) {
+        if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+          errorMessage = "Kết nối quá thời gian. Vui lòng kiểm tra kết nối mạng và thử lại.";
+        } else if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error") || error.message?.includes("network")) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.";
+        } else {
+          errorMessage = error?.message || "Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.";
+        }
+      } else {
+        // API returned an error response
+        errorMessage = error?.response?.data?.message || error?.message || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
